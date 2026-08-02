@@ -195,6 +195,21 @@ interface POWCage {
   rescued: boolean;
 }
 
+interface Mine {
+  mesh: Group;
+  x: number;
+  z: number;
+  pulseTimer: number;
+  armed: boolean;
+}
+
+interface ScorePopup {
+  mesh: Group;
+  y: number;
+  vy: number;
+  life: number;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -263,6 +278,13 @@ export interface GameState {
   radarEnemies: { rx: number; rz: number }[];
   radarPowerUps: { rx: number; rz: number }[];
   radarSupplies: { rx: number; rz: number }[];
+  // Wave progress
+  waveEnemiesTotal: number;
+  // Damage flash
+  damageFlashTimer: number;
+  // Wave announcement
+  waveName: string;
+  waveNameTimer: number;
 }
 
 // ── Constants ──
@@ -317,6 +339,9 @@ export class GameSystem extends createSystem({}) {
   private achievements: Map<string, boolean> = new Map();
   private achievementQueue: string[] = [];
   private achievementTimer = 0;
+  private mines: Mine[] = [];
+  private scorePopups: ScorePopup[] = [];
+  private damageFlashMesh: Mesh | null = null;
 
   init() {
     this.state = this.createDefaultState();
@@ -389,6 +414,10 @@ export class GameSystem extends createSystem({}) {
       radarEnemies: [],
       radarPowerUps: [],
       radarSupplies: [],
+      waveEnemiesTotal: 0,
+      damageFlashTimer: 0,
+      waveName: '',
+      waveNameTimer: 0,
     };
   }
 
@@ -464,6 +493,9 @@ export class GameSystem extends createSystem({}) {
     this.playerGroup = new Group();
     this.buildPlayer();
     scene.add(this.playerGroup);
+
+    // Damage flash overlay
+    this.createDamageFlash();
 
     // Camera setup (top-down angled)
     this.world.camera.position.set(0, 18, 10);
@@ -861,6 +893,30 @@ export class GameSystem extends createSystem({}) {
     hp = Math.ceil(hp * diffMult);
     shootInterval /= diffMult;
 
+    // Wave-based progressive scaling
+    const waveScale = 1 + this.state.wave * 0.04;
+    hp = Math.ceil(hp * waveScale);
+    speed *= (1 + this.state.wave * 0.02);
+    shootInterval *= Math.max(0.4, 1 - this.state.wave * 0.015);
+
+    // Elite/veteran variants — wave 8+, 25% chance for non-boss types
+    let isElite = false;
+    const bosses = ['boss', 'artillery', 'attack_heli'];
+    if (this.state.wave >= 8 && !bosses.includes(type) && Math.random() < 0.25) {
+      isElite = true;
+      hp *= 2;
+      speed *= 1.3;
+      points *= 2;
+      // Add glowing outline ring
+      const ringGeo = new RingGeometry(0.5, 0.6, 8);
+      const ringMat = new MeshBasicMaterial({ color: 0xff00ff, side: DoubleSide, transparent: true, opacity: 0.7 });
+      const ring = new Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.02;
+      ring.name = 'eliteRing';
+      group.add(ring);
+    }
+
     return {
       mesh: group,
       type,
@@ -1140,7 +1196,11 @@ export class GameSystem extends createSystem({}) {
 
       // Score with combo multiplier
       const comboMult = Math.min(1 + this.state.combo * 0.1, 4);
-      this.state.score += Math.floor(enemy.points * comboMult);
+      const earnedPoints = Math.floor(enemy.points * comboMult);
+      this.state.score += earnedPoints;
+
+      // Score popup
+      this.spawnScorePopup(enemy.x, enemy.z, earnedPoints, this.state.combo);
 
       // Drop power-up chance
       if (Math.random() < 0.2) {
@@ -1187,6 +1247,7 @@ export class GameSystem extends createSystem({}) {
     this.state.killStreakRapidActive = false;
     this.state.killStreakShieldActive = false;
     this.state.screenShake = 0.4;
+    this.state.damageFlashTimer = 0.3;
 
     const colors = this.getColors();
     for (let i = 0; i < 12; i++) {
@@ -1472,6 +1533,16 @@ export class GameSystem extends createSystem({}) {
     const baseCount = 4 + Math.floor(wave * 1.5);
     const diffMult = [1, 1.3, 1.6][this.state.difficulty];
     this.state.waveEnemiesLeft = Math.floor(baseCount * diffMult);
+    this.state.waveEnemiesTotal = this.state.waveEnemiesLeft;
+
+    // Dramatic wave names
+    const waveNames: Record<number, string> = {
+      5: 'IRON WALL', 10: 'FIRESTORM', 15: 'DEATH MARCH',
+      20: 'NO MERCY', 25: 'HELL GATE', 30: 'ANNIHILATION',
+      35: 'LAST STAND', 40: 'EXTINCTION', 45: 'ARMAGEDDON', 50: 'ENDGAME',
+    };
+    this.state.waveName = waveNames[wave] || (wave >= 15 ? `WAVE ${wave}: CARNAGE` : `WAVE ${wave}`);
+    this.state.waveNameTimer = 2.5;
 
     // Boss rotation: mech every 5th (5,20,35..), artillery every 10th (10,25,40..), helicopter every 15th (15,30,45..)
     let bossType: string | null = null;
@@ -1524,6 +1595,16 @@ export class GameSystem extends createSystem({}) {
     // Respawn companion if dead
     if (this.companion && !this.companion.alive) {
       this.respawnCompanion();
+    }
+
+    // Spawn mines starting wave 4
+    if (wave >= 4) {
+      const mineCount = 2 + Math.floor(wave * 0.3);
+      for (let i = 0; i < mineCount; i++) {
+        const mx = (Math.random() - 0.5) * (FIELD_WIDTH - 2);
+        const mz = this.state.playerZ - 8 - Math.random() * 18;
+        this.spawnMine(mx, mz);
+      }
     }
 
     (this as any).audioSystem?.playWaveStart();
@@ -1644,6 +1725,10 @@ export class GameSystem extends createSystem({}) {
     }
     for (const cage of this.powCages) this.world.scene.remove(cage.mesh);
     this.powCages = [];
+    for (const m of this.mines) this.world.scene.remove(m.mesh);
+    this.mines = [];
+    for (const sp of this.scorePopups) this.world.scene.remove(sp.mesh);
+    this.scorePopups = [];
   }
 
   // ── Vehicle System ──
@@ -2234,6 +2319,153 @@ export class GameSystem extends createSystem({}) {
     }
   }
 
+  // ── Mine System ──
+  private spawnMine(x: number, z: number) {
+    const colors = this.getColors();
+    const group = new Group();
+    // Mine disc
+    const discGeo = new CylinderGeometry(0.35, 0.35, 0.08, 8);
+    const discMat = new MeshStandardMaterial({ color: 0x880000, emissive: new Color(0xff0000), emissiveIntensity: 0.3 });
+    group.add(new Mesh(discGeo, discMat));
+    // Center indicator
+    const dotGeo = new SphereGeometry(0.08, 6, 4);
+    const dotMat = new MeshBasicMaterial({ color: 0xff0000 });
+    const dot = new Mesh(dotGeo, dotMat);
+    dot.position.y = 0.06;
+    dot.name = 'mineDot';
+    group.add(dot);
+    group.position.set(x, 0.04, z);
+    this.world.scene.add(group);
+    this.mines.push({ mesh: group, x, z, pulseTimer: Math.random() * 2, armed: true });
+  }
+
+  private detonateMine(mine: Mine) {
+    if (!mine.armed) return;
+    mine.armed = false;
+    this.createExplosion(mine.x, mine.z, 2.5, 3);
+    this.world.scene.remove(mine.mesh);
+
+    // Chain explosions — detonate nearby mines
+    for (const other of this.mines) {
+      if (!other.armed) continue;
+      const dx = other.x - mine.x, dz = other.z - mine.z;
+      if (dx * dx + dz * dz < 9) { // within 3 units
+        setTimeout(() => this.detonateMine(other), 100);
+      }
+    }
+  }
+
+  private updateMines(dt: number) {
+    const s = this.state;
+    for (let i = this.mines.length - 1; i >= 0; i--) {
+      const m = this.mines[i];
+      if (!m.armed) { this.mines.splice(i, 1); continue; }
+
+      // Pulsing glow
+      m.pulseTimer += dt * 3;
+      const dot = m.mesh.getObjectByName('mineDot') as Mesh | undefined;
+      if (dot && dot.material instanceof MeshBasicMaterial) {
+        const pulse = 0.3 + Math.sin(m.pulseTimer) * 0.7;
+        (dot.material as MeshBasicMaterial).opacity = pulse;
+        dot.material.transparent = true;
+      }
+
+      // Player collision
+      const pdx = s.playerX - m.x, pdz = (s.playerZ) - m.z;
+      if (pdx * pdx + pdz * pdz < 0.8) {
+        this.detonateMine(m);
+        this.damagePlayer();
+        continue;
+      }
+
+      // Enemy collision
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        const edx = e.x - m.x, edz = e.z - m.z;
+        if (edx * edx + edz * edz < 0.8) {
+          this.detonateMine(m);
+          break;
+        }
+      }
+
+      // Off-screen cleanup
+      if (m.z > s.scrollZ + 20) {
+        this.world.scene.remove(m.mesh);
+        this.mines.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Score Popup System ──
+  private spawnScorePopup(x: number, z: number, points: number, comboCount: number) {
+    const group = new Group();
+    const label = comboCount > 2
+      ? `COMBO x${comboCount}! +${points}`
+      : `+${points}`;
+    // Build text from box meshes (billboard style)
+    const color = comboCount > 2 ? 0xffaa00 : points >= 250 ? 0xff00ff : 0x00ff88;
+    const textMat = new MeshBasicMaterial({ color, transparent: true, opacity: 1 });
+    // Simple floating marker cube + point light indicator
+    const markerGeo = new BoxGeometry(0.15, 0.15, 0.15);
+    const marker = new Mesh(markerGeo, textMat);
+    group.add(marker);
+    // Score ring
+    const ringGeo = new RingGeometry(0.2, 0.35, 6);
+    const ringMat = new MeshBasicMaterial({ color, transparent: true, opacity: 0.8, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    group.add(ring);
+    group.position.set(x, 1, z);
+    this.world.scene.add(group);
+    this.scorePopups.push({ mesh: group, y: 1, vy: 2.5, life: 1.2 });
+  }
+
+  private updateScorePopups(dt: number) {
+    for (let i = this.scorePopups.length - 1; i >= 0; i--) {
+      const p = this.scorePopups[i];
+      p.life -= dt;
+      p.y += p.vy * dt;
+      p.vy *= 0.97;
+      p.mesh.position.y = p.y;
+      // Scale down as fading
+      const alpha = Math.max(0, p.life / 1.2);
+      p.mesh.scale.setScalar(0.8 + alpha * 0.5);
+      p.mesh.children.forEach(c => {
+        if (c instanceof Mesh && c.material instanceof MeshBasicMaterial) {
+          c.material.opacity = alpha;
+        }
+      });
+      if (p.life <= 0) {
+        this.world.scene.remove(p.mesh);
+        this.scorePopups.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Damage Flash Overlay ──
+  private createDamageFlash() {
+    const geo = new PlaneGeometry(40, 30);
+    const mat = new MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0, side: DoubleSide });
+    this.damageFlashMesh = new Mesh(geo, mat);
+    this.damageFlashMesh.position.set(0, 15, 0);
+    this.damageFlashMesh.rotation.x = -Math.PI / 2;
+    this.damageFlashMesh.renderOrder = 999;
+    this.world.scene.add(this.damageFlashMesh);
+  }
+
+  private updateDamageFlash(dt: number) {
+    const s = this.state;
+    if (s.damageFlashTimer > 0) {
+      s.damageFlashTimer -= dt;
+      if (this.damageFlashMesh && this.damageFlashMesh.material instanceof MeshBasicMaterial) {
+        this.damageFlashMesh.material.opacity = Math.max(0, s.damageFlashTimer / 0.3) * 0.35;
+        this.damageFlashMesh.position.set(s.playerX + s.screenShakeX, 12, s.playerZ + s.screenShakeZ - 5);
+      }
+    } else if (this.damageFlashMesh && this.damageFlashMesh.material instanceof MeshBasicMaterial) {
+      this.damageFlashMesh.material.opacity = 0;
+    }
+  }
+
   // ── Main Update ──
   update(delta: number) {
     if (!this.initialized) return;
@@ -2261,6 +2493,9 @@ export class GameSystem extends createSystem({}) {
       this.updateMissions(dt);
       this.updatePOWCages();
       this.updateRadarData();
+      this.updateMines(dt);
+      this.updateScorePopups(dt);
+      this.updateDamageFlash(dt);
       this.updateCamera(dt);
       this.updateTimers(dt);
       this.updateScreenShake(dt);
@@ -2521,6 +2756,21 @@ export class GameSystem extends createSystem({}) {
             this.world.scene.remove(b.mesh);
             this.bullets.splice(i, 1);
             break;
+          }
+        }
+
+        // Player bullets hit mines (shoot to detonate safely)
+        if (!b.isEnemy) {
+          for (const mine of this.mines) {
+            if (!mine.armed) continue;
+            const dx = b.mesh.position.x - mine.x;
+            const dz = b.mesh.position.z - mine.z;
+            if (dx * dx + dz * dz < 0.5) {
+              this.detonateMine(mine);
+              this.world.scene.remove(b.mesh);
+              this.bullets.splice(i, 1);
+              break;
+            }
           }
         }
       }
@@ -3004,6 +3254,7 @@ export class GameSystem extends createSystem({}) {
         s.combo = 0;
       }
     }
+    if (s.waveNameTimer > 0) s.waveNameTimer -= dt;
   }
 
   private updateScreenShake(dt: number) {
@@ -3155,6 +3406,7 @@ export class GameSystem extends createSystem({}) {
   getAchievements(): Map<string, boolean> { return this.achievements; }
   getAchievementDefs() { return GameSystem.ACHIEVEMENT_DEFS; }
   popAchievementQueue(): string | undefined { return this.achievementQueue.shift(); }
+  getAliveEnemyCount(): number { return this.enemies.filter(e => !e.dead).length; }
 
   getState(): GameState {
     return this.state;

@@ -433,6 +433,34 @@ export class UISystem extends createSystem({
     setText(this.hudDoc, 'hud-wave', `Wave ${s.wave}`);
     setText(this.hudDoc, 'hud-grenades', `G: ${s.grenadeCount}`);
 
+    // Wave announcement
+    if (s.waveNameTimer > 0) {
+      setText(this.hudDoc, 'hud-wave-announce', s.waveName);
+    } else {
+      setText(this.hudDoc, 'hud-wave-announce', '');
+    }
+
+    // Wave progress bar
+    if (s.waveEnemiesTotal > 0) {
+      const alive = this.gameSystem.getAliveEnemyCount();
+      const remaining = s.waveEnemiesLeft + alive;
+      const pct = Math.max(0, Math.min(100, ((s.waveEnemiesTotal - remaining) / s.waveEnemiesTotal) * 100));
+      setText(this.hudDoc, 'hud-progress-label', `${s.waveEnemiesTotal - remaining}/${s.waveEnemiesTotal}`);
+      const fillEl = this.hudDoc?.getElementById('hud-progress-fill') as UIKit.Container | undefined;
+      fillEl?.setProperties({ width: Math.round(pct * 1.2) });
+    }
+
+    // Boss HP bar
+    if (s.bossActive && s.bossEntity) {
+      setVis(this.hudDoc, 'hud-boss-progress', true);
+      const bossHpPct = Math.max(0, (s.bossEntity.hp / s.bossEntity.maxHp) * 100);
+      setText(this.hudDoc, 'hud-boss-label', `${s.bossType.toUpperCase()} ${Math.ceil(bossHpPct)}%`);
+      const bossFill = this.hudDoc?.getElementById('hud-boss-fill') as UIKit.Container | undefined;
+      bossFill?.setProperties({ width: Math.round(bossHpPct * 1.2) });
+    } else {
+      setVis(this.hudDoc, 'hud-boss-progress', false);
+    }
+
     // Combo display
     if (s.combo > 1) {
       setText(this.hudDoc, 'hud-combo', `${s.combo}x COMBO`);

@@ -1,15 +1,20 @@
 <panel>
   <style>
     #root {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      align-items: stretch;
       padding: 8;
-      gap: 12;
+      gap: 4;
       background-color: rgba(10, 26, 10, 0.8);
       border-radius: 8;
       border-color: #00ff88;
       border-width: 1;
+    }
+    .top-row {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12;
     }
     .hud-item {
       font-size: 14;
@@ -54,23 +59,73 @@
       align-items: center;
       gap: 2;
     }
+    #hud-wave-announce {
+      font-size: 20;
+      color: #ff4400;
+    }
+    .progress-row {
+      flex-direction: row;
+      align-items: center;
+      gap: 6;
+    }
+    #hud-progress-label {
+      font-size: 10;
+      color: #00ff88;
+    }
+    .bar-bg {
+      width: 120;
+      height: 6;
+      background-color: rgba(0, 255, 136, 0.2);
+      border-radius: 3;
+    }
+    #hud-progress-fill {
+      height: 6;
+      background-color: #00ff88;
+      border-radius: 3;
+    }
+    #hud-boss-label {
+      font-size: 10;
+      color: #ff2200;
+    }
+    .boss-bar-bg {
+      width: 120;
+      height: 6;
+      background-color: rgba(255, 34, 0, 0.2);
+      border-radius: 3;
+    }
+    #hud-boss-fill {
+      height: 6;
+      background-color: #ff2200;
+      border-radius: 3;
+    }
   </style>
   <div id="root">
-    <div class="left-group">
-      <div id="hud-score" class="hud-item">Score: 0</div>
-      <div id="hud-wave" class="hud-item">Wave 1</div>
+    <div id="hud-wave-announce"></div>
+    <div class="top-row">
+      <div class="left-group">
+        <div id="hud-score" class="hud-item">Score: 0</div>
+        <div id="hud-wave" class="hud-item">Wave 1</div>
+      </div>
+      <div class="center-group">
+        <div id="hud-combo"></div>
+        <div id="hud-weapon"></div>
+        <div id="hud-shield"></div>
+        <div id="hud-streak"></div>
+        <div id="hud-timer"></div>
+        <div id="hud-achievement"></div>
+      </div>
+      <div class="right-group">
+        <div id="hud-lives" class="hud-item">Lives: 3</div>
+        <div id="hud-grenades" class="hud-item">G: 5</div>
+      </div>
     </div>
-    <div class="center-group">
-      <div id="hud-combo"></div>
-      <div id="hud-weapon"></div>
-      <div id="hud-shield"></div>
-      <div id="hud-streak"></div>
-      <div id="hud-timer"></div>
-      <div id="hud-achievement"></div>
+    <div class="progress-row" id="hud-wave-progress">
+      <div id="hud-progress-label">Enemies</div>
+      <div class="bar-bg"><div id="hud-progress-fill"></div></div>
     </div>
-    <div class="right-group">
-      <div id="hud-lives" class="hud-item">Lives: 3</div>
-      <div id="hud-grenades" class="hud-item">G: 5</div>
+    <div class="progress-row" id="hud-boss-progress">
+      <div id="hud-boss-label">BOSS</div>
+      <div class="boss-bar-bg"><div id="hud-boss-fill"></div></div>
     </div>
   </div>
 </panel>
