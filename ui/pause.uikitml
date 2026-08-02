@@ -1,0 +1,46 @@
+<panel>
+  <style>
+    #root {
+      flex-direction: column;
+      align-items: center;
+      padding: 20;
+      gap: 12;
+      background-color: rgba(10, 26, 10, 0.95);
+      border-radius: 16;
+      border-color: #ffaa00;
+      border-width: 2;
+    }
+    #pause-title {
+      font-size: 28;
+      color: #ffaa00;
+    }
+    #pause-subtitle {
+      font-size: 14;
+      color: #ccaa66;
+    }
+    .pause-btn {
+      font-size: 18;
+      color: #00ff88;
+      background-color: rgba(0, 255, 136, 0.15);
+      padding: 10;
+      border-radius: 8;
+      border-color: #00ff88;
+      border-width: 1;
+      min-width: 180;
+      align-items: center;
+      justify-content: center;
+      margin-top: 6;
+    }
+    #btn-quit {
+      color: #ff4444;
+      background-color: rgba(255, 68, 68, 0.1);
+      border-color: #ff4444;
+    }
+  </style>
+  <div id="root">
+    <div id="pause-title">PAUSED</div>
+    <div id="pause-subtitle">Mission on Hold</div>
+    <div id="btn-resume" class="pause-btn">Resume</div>
+    <div id="btn-quit" class="pause-btn">Quit to Menu</div>
+  </div>
+</panel>

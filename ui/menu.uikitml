@@ -1,0 +1,109 @@
+<panel>
+  <style>
+    #root {
+      flex-direction: column;
+      align-items: center;
+      padding: 20;
+      gap: 12;
+      background-color: rgba(10, 26, 10, 0.95);
+      border-radius: 16;
+      border-color: #00ff88;
+      border-width: 2;
+    }
+    #title {
+      font-size: 32;
+      color: #00ff88;
+    }
+    #subtitle {
+      font-size: 14;
+      color: #88ccaa;
+    }
+    .section-label {
+      font-size: 14;
+      color: #66aa88;
+      margin-top: 8;
+    }
+    .btn-row {
+      flex-direction: row;
+      gap: 8;
+    }
+    .mode-btn {
+      font-size: 13;
+      color: #00ff88;
+      background-color: rgba(0, 255, 136, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #00ff88;
+      border-width: 1;
+      min-width: 80;
+      align-items: center;
+      justify-content: center;
+    }
+    .diff-btn {
+      font-size: 13;
+      color: #ffaa00;
+      background-color: rgba(255, 170, 0, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #ffaa00;
+      border-width: 1;
+      min-width: 70;
+      align-items: center;
+      justify-content: center;
+    }
+    #btn-start {
+      font-size: 20;
+      color: #ffffff;
+      background-color: rgba(0, 255, 136, 0.3);
+      padding: 10;
+      border-radius: 10;
+      border-color: #00ff88;
+      border-width: 2;
+      margin-top: 10;
+      min-width: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-btn {
+      font-size: 13;
+      color: #88ccaa;
+      background-color: rgba(136, 204, 170, 0.1);
+      padding: 5;
+      border-radius: 6;
+      border-color: #88ccaa;
+      border-width: 1;
+      min-width: 80;
+      align-items: center;
+      justify-content: center;
+    }
+    #highscore {
+      font-size: 12;
+      color: #ffaa00;
+      margin-top: 4;
+    }
+  </style>
+  <div id="root">
+    <div id="title">NEON COMMANDO</div>
+    <div id="subtitle">Top-Down Run-and-Gun Arcade</div>
+    <div class="section-label">-- MODE --</div>
+    <div class="btn-row">
+      <div id="btn-arcade" class="mode-btn">> Arcade <</div>
+      <div id="btn-speed" class="mode-btn">Speed</div>
+      <div id="btn-zen" class="mode-btn">Zen</div>
+      <div id="btn-challenge" class="mode-btn">Challenge</div>
+    </div>
+    <div class="section-label">-- DIFFICULTY --</div>
+    <div class="btn-row">
+      <div id="btn-normal" class="diff-btn">> Normal <</div>
+      <div id="btn-hard" class="diff-btn">Hard</div>
+      <div id="btn-insane" class="diff-btn">Insane</div>
+    </div>
+    <div id="btn-start">START MISSION</div>
+    <div class="btn-row">
+      <div id="btn-settings" class="nav-btn">Settings</div>
+      <div id="btn-stats" class="nav-btn">Stats</div>
+      <div id="btn-tutorial" class="nav-btn">Controls</div>
+    </div>
+    <div id="highscore">High Score: 0</div>
+  </div>
+</panel>

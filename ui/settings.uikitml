@@ -1,0 +1,65 @@
+<panel>
+  <style>
+    #root {
+      flex-direction: column;
+      align-items: center;
+      padding: 16;
+      gap: 10;
+      background-color: rgba(10, 26, 10, 0.95);
+      border-radius: 16;
+      border-color: #88ccaa;
+      border-width: 2;
+    }
+    #settings-title {
+      font-size: 22;
+      color: #88ccaa;
+    }
+    .section-label {
+      font-size: 13;
+      color: #66aa88;
+      margin-top: 8;
+    }
+    .btn-row {
+      flex-direction: row;
+      gap: 6;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .scheme-btn {
+      font-size: 12;
+      color: #00ff88;
+      background-color: rgba(0, 255, 136, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #00ff88;
+      border-width: 1;
+      min-width: 70;
+      align-items: center;
+      justify-content: center;
+    }
+    .close-btn {
+      font-size: 14;
+      color: #ff4444;
+      background-color: rgba(255, 68, 68, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #ff4444;
+      border-width: 1;
+      margin-top: 10;
+      min-width: 80;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+  <div id="root">
+    <div id="settings-title">SETTINGS</div>
+    <div class="section-label">-- COLOR SCHEME --</div>
+    <div class="btn-row">
+      <div id="btn-military" class="scheme-btn">Military</div>
+      <div id="btn-desert" class="scheme-btn">Desert</div>
+      <div id="btn-arctic" class="scheme-btn">Arctic</div>
+      <div id="btn-neon" class="scheme-btn">Neon</div>
+    </div>
+    <div id="btn-close-settings" class="close-btn">Close</div>
+  </div>
+</panel>

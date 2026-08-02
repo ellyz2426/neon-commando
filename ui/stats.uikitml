@@ -1,0 +1,46 @@
+<panel>
+  <style>
+    #root {
+      flex-direction: column;
+      align-items: center;
+      padding: 16;
+      gap: 8;
+      background-color: rgba(10, 26, 10, 0.95);
+      border-radius: 16;
+      border-color: #88ccaa;
+      border-width: 2;
+    }
+    #stats-title {
+      font-size: 22;
+      color: #88ccaa;
+    }
+    .stat-row {
+      font-size: 13;
+      color: #00ff88;
+    }
+    .close-btn {
+      font-size: 14;
+      color: #ff4444;
+      background-color: rgba(255, 68, 68, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #ff4444;
+      border-width: 1;
+      margin-top: 10;
+      min-width: 80;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+  <div id="root">
+    <div id="stats-title">CAREER STATS</div>
+    <div id="stat-highscore" class="stat-row">High Score: 0</div>
+    <div id="stat-kills" class="stat-row">Total Kills: 0</div>
+    <div id="stat-grenades" class="stat-row">Grenades Used: 0</div>
+    <div id="stat-shots" class="stat-row">Shots Fired: 0</div>
+    <div id="stat-powerups" class="stat-row">Power-Ups: 0</div>
+    <div id="stat-waves" class="stat-row">Best Wave: 0</div>
+    <div id="stat-deaths" class="stat-row">Total Deaths: 0</div>
+    <div id="btn-close-stats" class="close-btn">Close</div>
+  </div>
+</panel>

@@ -1,0 +1,61 @@
+<panel>
+  <style>
+    #root {
+      flex-direction: column;
+      align-items: center;
+      padding: 16;
+      gap: 8;
+      background-color: rgba(10, 26, 10, 0.95);
+      border-radius: 16;
+      border-color: #88ccaa;
+      border-width: 2;
+    }
+    #tutorial-title {
+      font-size: 22;
+      color: #88ccaa;
+    }
+    .section {
+      font-size: 14;
+      color: #ffaa00;
+      margin-top: 6;
+    }
+    .control-row {
+      font-size: 12;
+      color: #00ff88;
+    }
+    .close-btn {
+      font-size: 14;
+      color: #ff4444;
+      background-color: rgba(255, 68, 68, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #ff4444;
+      border-width: 1;
+      margin-top: 10;
+      min-width: 80;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+  <div id="root">
+    <div id="tutorial-title">CONTROLS</div>
+    <div class="section">-- KEYBOARD --</div>
+    <div class="control-row">WASD / Arrows: Move</div>
+    <div class="control-row">Space / K: Shoot</div>
+    <div class="control-row">E / J: Throw Grenade</div>
+    <div class="control-row">Numpad: Aim Direction</div>
+    <div class="control-row">Esc / P: Pause</div>
+    <div class="section">-- VR CONTROLLERS --</div>
+    <div class="control-row">Left Stick: Move</div>
+    <div class="control-row">Right Stick: Aim</div>
+    <div class="control-row">Right Trigger: Shoot</div>
+    <div class="control-row">A Button: Grenade</div>
+    <div class="control-row">Left Trigger: Grenade</div>
+    <div class="control-row">B Button: Pause</div>
+    <div class="section">-- TIPS --</div>
+    <div class="control-row">Destroy barrels for explosions</div>
+    <div class="control-row">Shoot crates for power-ups</div>
+    <div class="control-row">Chain kills for combo multiplier</div>
+    <div id="btn-close-tutorial" class="close-btn">Close</div>
+  </div>
+</panel>
