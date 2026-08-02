@@ -141,6 +141,35 @@ interface BeamState {
   mesh: Mesh | null;
 }
 
+interface Vehicle {
+  mesh: Group;
+  x: number;
+  z: number;
+  hp: number;
+  maxHp: number;
+  occupied: boolean;
+  bobTimer: number;
+  gunCooldown: number;
+}
+
+interface MuzzleFlash {
+  mesh: Mesh;
+  life: number;
+}
+
+interface TracerRound {
+  mesh: Group;
+  vx: number;
+  vz: number;
+  life: number;
+}
+
+interface TerrainFeature {
+  mesh: Group;
+  z: number;
+  type: 'river' | 'bunker' | 'trench';
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -191,6 +220,9 @@ export interface GameState {
   enemySpawnTimer: number;
   bossActive: boolean;
   bossEntity: Enemy | null;
+  inVehicle: boolean;
+  vehicleHp: number;
+  vehicleTimer: number;
 }
 
 // ── Constants ──
@@ -235,6 +267,11 @@ export class GameSystem extends createSystem({}) {
   private supplyCrates: SupplyCrate[] = [];
   private flameParticles: FlameParticle[] = [];
   private beamState: BeamState = { active: false, angle: 0, length: 12, mesh: null };
+  private vehicles: Vehicle[] = [];
+  private muzzleFlashes: MuzzleFlash[] = [];
+  private tracerRounds: TracerRound[] = [];
+  private terrainFeatures: TerrainFeature[] = [];
+  private activeVehicle: Vehicle | null = null;
 
   init() {
     this.state = this.createDefaultState();
@@ -293,6 +330,9 @@ export class GameSystem extends createSystem({}) {
       enemySpawnTimer: 0,
       bossActive: false,
       bossEntity: null,
+      inVehicle: false,
+      vehicleHp: 0,
+      vehicleTimer: 40,
     };
   }
 
@@ -950,8 +990,7 @@ export class GameSystem extends createSystem({}) {
     enemy.flashTimer = 0.1;
 
     if (enemy.hp <= 0) {
-      enemy.dead = true;
-      enemy.deathTimer = 0.3;
+      this.killEnemyEnhanced(enemy);
       this.state.kills++;
       this.state.totalKills++;
       this.state.killStreak++;
@@ -1319,6 +1358,12 @@ export class GameSystem extends createSystem({}) {
     }
 
     this.state.totalWaves = Math.max(this.state.totalWaves, wave);
+
+    // Spawn terrain features ahead
+    if (wave >= 2 && Math.random() < 0.6) {
+      this.spawnTerrainFeature(this.state.playerZ - 25 - Math.random() * 15);
+    }
+
     (this as any).audioSystem?.playWaveStart();
   }
 
@@ -1384,6 +1429,9 @@ export class GameSystem extends createSystem({}) {
     s.killStreakRapidActive = false;
     s.killStreakShieldActive = false;
     s.supplyDropTimer = 30;
+    s.inVehicle = false;
+    s.vehicleHp = 0;
+    s.vehicleTimer = 40;
 
     if (mode === 2) s.lives = 99; // Zen
 
@@ -1414,6 +1462,361 @@ export class GameSystem extends createSystem({}) {
       this.beamState.mesh = null;
       this.beamState.active = false;
     }
+    for (const v of this.vehicles) this.world.scene.remove(v.mesh);
+    this.vehicles = [];
+    this.activeVehicle = null;
+    for (const f of this.muzzleFlashes) this.world.scene.remove(f.mesh);
+    this.muzzleFlashes = [];
+    for (const t of this.tracerRounds) this.world.scene.remove(t.mesh);
+    this.tracerRounds = [];
+    for (const tf of this.terrainFeatures) this.terrainGroup.remove(tf.mesh);
+    this.terrainFeatures = [];
+  }
+
+  // ── Vehicle System ──
+  private spawnVehicle() {
+    const s = this.state;
+    const colors = this.getColors();
+    const group = new Group();
+
+    // Chassis
+    const chassisGeo = new BoxGeometry(1.4, 0.4, 2.2);
+    const chassisMat = new MeshStandardMaterial({ color: 0x446644, emissive: new Color(colors.primary), emissiveIntensity: 0.2 });
+    group.add(new Mesh(chassisGeo, chassisMat));
+
+    // Cab
+    const cabGeo = new BoxGeometry(1.0, 0.5, 0.8);
+    const cabMat = new MeshStandardMaterial({ color: 0x557755, emissive: new Color(colors.primary), emissiveIntensity: 0.15 });
+    const cab = new Mesh(cabGeo, cabMat);
+    cab.position.set(0, 0.45, 0.4);
+    group.add(cab);
+
+    // Wireframe overlay
+    const wireGeo = new EdgesGeometry(new BoxGeometry(1.5, 0.9, 2.3));
+    const wireMat = new LineBasicMaterial({ color: colors.primary, transparent: true, opacity: 0.5 });
+    group.add(new LineSegments(wireGeo, wireMat));
+
+    // Wheels (4 corners)
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const wheelGeo = new CylinderGeometry(0.25, 0.25, 0.15, 8);
+        const wheelMat = new MeshStandardMaterial({ color: 0x222222 });
+        const wheel = new Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(sx * 0.75, -0.15, sz * 0.8);
+        group.add(wheel);
+      }
+    }
+
+    // Gun turret on bed
+    const turretGeo = new CylinderGeometry(0.2, 0.25, 0.2, 6);
+    const turretMat = new MeshStandardMaterial({ color: 0x888888, emissive: new Color(colors.accent), emissiveIntensity: 0.3 });
+    const turret = new Mesh(turretGeo, turretMat);
+    turret.position.set(0, 0.5, -0.5);
+    group.add(turret);
+    const barrelGeo = new CylinderGeometry(0.05, 0.05, 0.8, 6);
+    const barrel = new Mesh(barrelGeo, turretMat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.55, -0.9);
+    group.add(barrel);
+
+    // Glow indicator ring
+    const ringGeo = new RingGeometry(1.2, 1.4, 12);
+    const ringMat = new MeshBasicMaterial({ color: colors.primary, transparent: true, opacity: 0.35, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    ring.name = 'indicator';
+    group.add(ring);
+
+    const x = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+    const z = s.playerZ - 10 - Math.random() * 8;
+    group.position.set(x, 0, z);
+    this.world.scene.add(group);
+
+    this.vehicles.push({ mesh: group, x, z, hp: 3, maxHp: 3, occupied: false, bobTimer: 0, gunCooldown: 0 });
+  }
+
+  private mountVehicle(v: Vehicle) {
+    const s = this.state;
+    s.inVehicle = true;
+    s.vehicleHp = v.hp;
+    v.occupied = true;
+    this.activeVehicle = v;
+    this.playerGroup.visible = false;
+    // Hide indicator ring
+    const ring = v.mesh.getObjectByName('indicator');
+    if (ring) ring.visible = false;
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private dismountVehicle(eject: boolean) {
+    const s = this.state;
+    s.inVehicle = false;
+    this.playerGroup.visible = true;
+    if (this.activeVehicle) {
+      this.activeVehicle.occupied = false;
+      if (eject) {
+        // Explode vehicle
+        this.createExplosion(this.activeVehicle.x, this.activeVehicle.z, 3, 2);
+        this.world.scene.remove(this.activeVehicle.mesh);
+        const idx = this.vehicles.indexOf(this.activeVehicle);
+        if (idx >= 0) this.vehicles.splice(idx, 1);
+        s.invincibleTimer = Math.max(s.invincibleTimer, 2); // brief invincibility
+      }
+      this.activeVehicle = null;
+    }
+  }
+
+  private updateVehicles(dt: number) {
+    const s = this.state;
+
+    // Vehicle spawn timer
+    s.vehicleTimer -= dt;
+    if (s.vehicleTimer <= 0 && this.vehicles.length < 2) {
+      s.vehicleTimer = 35 + Math.random() * 15;
+      this.spawnVehicle();
+    }
+
+    // Check mount proximity for unoccupied vehicles
+    for (const v of this.vehicles) {
+      if (v.occupied) continue;
+      v.bobTimer += dt;
+      // Pulse indicator
+      const ring = v.mesh.getObjectByName('indicator');
+      if (ring) {
+        (ring as Mesh).rotation.y += dt;
+        const mat = (ring as Mesh).material as MeshBasicMaterial;
+        mat.opacity = 0.2 + Math.sin(v.bobTimer * 3) * 0.15;
+      }
+      // Mount check
+      if (!s.inVehicle) {
+        const dx = s.playerX - v.x;
+        const dz = s.playerZ - v.z;
+        if (Math.sqrt(dx * dx + dz * dz) < 1.5) {
+          this.mountVehicle(v);
+        }
+      }
+    }
+
+    // Update active vehicle
+    if (s.inVehicle && this.activeVehicle) {
+      const v = this.activeVehicle;
+      v.x = s.playerX;
+      v.z = s.playerZ;
+      v.mesh.position.set(v.x, 0, v.z);
+      v.mesh.rotation.y = s.playerAngle;
+      v.gunCooldown -= dt;
+    }
+
+    // Remove vehicles far behind
+    for (let i = this.vehicles.length - 1; i >= 0; i--) {
+      const v = this.vehicles[i];
+      if (!v.occupied && v.z > s.playerZ + 20) {
+        this.world.scene.remove(v.mesh);
+        this.vehicles.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Terrain Features ──
+  private spawnTerrainFeature(z: number) {
+    const colors = this.getColors();
+    const types: Array<'river' | 'bunker' | 'trench'> = ['river', 'bunker', 'trench'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const group = new Group();
+
+    switch (type) {
+      case 'river': {
+        // Water strip with bridge
+        const waterGeo = new PlaneGeometry(FIELD_WIDTH + 2, 3, 1, 1);
+        const waterMat = new MeshBasicMaterial({ color: 0x1144aa, transparent: true, opacity: 0.55, side: DoubleSide });
+        const water = new Mesh(waterGeo, waterMat);
+        water.rotation.x = -Math.PI / 2;
+        water.position.y = 0.02;
+        group.add(water);
+        // Shimmer overlay
+        const shimmerGeo = new PlaneGeometry(FIELD_WIDTH + 2, 3, 8, 2);
+        const shimmerMat = new MeshBasicMaterial({ color: 0x2266cc, transparent: true, opacity: 0.25, side: DoubleSide });
+        const shimmer = new Mesh(shimmerGeo, shimmerMat);
+        shimmer.rotation.x = -Math.PI / 2;
+        shimmer.position.y = 0.04;
+        shimmer.name = 'shimmer';
+        group.add(shimmer);
+        // Bridge
+        const bridgeX = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+        const bridgeGeo = new BoxGeometry(3, 0.15, 3.5);
+        const bridgeMat = new MeshStandardMaterial({ color: 0x664422, roughness: 0.9 });
+        const bridge = new Mesh(bridgeGeo, bridgeMat);
+        bridge.position.set(bridgeX, 0.08, 0);
+        group.add(bridge);
+        // Rails
+        for (const s of [-1, 1]) {
+          const railGeo = new BoxGeometry(0.1, 0.4, 3.5);
+          const rail = new Mesh(railGeo, bridgeMat);
+          rail.position.set(bridgeX + s * 1.45, 0.2, 0);
+          group.add(rail);
+        }
+        break;
+      }
+      case 'bunker': {
+        // Concrete bunker structure
+        const bx = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+        const bunkerGeo = new BoxGeometry(2.5, 1.2, 1.8);
+        const bunkerMat = new MeshStandardMaterial({ color: 0x555555, roughness: 0.95 });
+        group.add(new Mesh(bunkerGeo, bunkerMat));
+        group.children[0].position.set(bx, 0.6, 0);
+        // Slit window
+        const slitGeo = new BoxGeometry(1.5, 0.2, 0.1);
+        const slitMat = new MeshBasicMaterial({ color: 0x111111 });
+        const slit = new Mesh(slitGeo, slitMat);
+        slit.position.set(bx, 0.9, -0.91);
+        group.add(slit);
+        // Roof edge
+        const roofGeo = new BoxGeometry(2.7, 0.1, 2.0);
+        const roofMat = new MeshStandardMaterial({ color: 0x444444 });
+        const roof = new Mesh(roofGeo, roofMat);
+        roof.position.set(bx, 1.25, 0);
+        group.add(roof);
+        break;
+      }
+      case 'trench': {
+        // Indented strip
+        const trenchGeo = new BoxGeometry(FIELD_WIDTH - 2, 0.3, 2);
+        const trenchMat = new MeshStandardMaterial({ color: 0x332211, roughness: 1.0 });
+        const trench = new Mesh(trenchGeo, trenchMat);
+        trench.position.y = -0.15;
+        group.add(trench);
+        // Trench walls
+        for (const s of [-1, 1]) {
+          const wallGeo = new BoxGeometry(FIELD_WIDTH - 2, 0.4, 0.15);
+          const wallMat = new MeshStandardMaterial({ color: 0x443322 });
+          const wall = new Mesh(wallGeo, wallMat);
+          wall.position.set(0, 0.05, s * 1.0);
+          group.add(wall);
+        }
+        // Sandbag clusters
+        for (let i = 0; i < 3; i++) {
+          const sbGeo = new BoxGeometry(0.8, 0.3, 0.4);
+          const sbMat = new MeshStandardMaterial({ color: 0x887755 });
+          const sb = new Mesh(sbGeo, sbMat);
+          sb.position.set(-4 + i * 4, 0.2, (Math.random() > 0.5 ? 1 : -1) * 0.8);
+          group.add(sb);
+        }
+        break;
+      }
+    }
+
+    group.position.set(0, 0, z);
+    this.terrainGroup.add(group);
+    this.terrainFeatures.push({ mesh: group, z, type });
+  }
+
+  // ── Muzzle Flash ──
+  private spawnMuzzleFlash(x: number, y: number, z: number) {
+    const geo = new SphereGeometry(0.2, 6, 4);
+    const mat = new MeshBasicMaterial({ color: 0xffff44, transparent: true, opacity: 1.0 });
+    const mesh = new Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    this.world.scene.add(mesh);
+    this.muzzleFlashes.push({ mesh, life: 0.06 });
+  }
+
+  private updateMuzzleFlashes(dt: number) {
+    for (let i = this.muzzleFlashes.length - 1; i >= 0; i--) {
+      const f = this.muzzleFlashes[i];
+      f.life -= dt;
+      const mat = f.mesh.material as MeshBasicMaterial;
+      mat.opacity = f.life / 0.06;
+      f.mesh.scale.setScalar(1 + (0.06 - f.life) * 15);
+      if (f.life <= 0) {
+        this.world.scene.remove(f.mesh);
+        this.muzzleFlashes.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Tracer Rounds ──
+  private fireTracerRound(x: number, z: number, angle: number) {
+    const group = new Group();
+    // Bright core
+    const coreGeo = new SphereGeometry(0.1, 4, 4);
+    const coreMat = new MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 1 });
+    group.add(new Mesh(coreGeo, coreMat));
+    // Trail
+    const trailGeo = new CylinderGeometry(0.04, 0.08, 0.5, 4);
+    const trailMat = new MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 });
+    const trail = new Mesh(trailGeo, trailMat);
+    trail.rotation.x = Math.PI / 2;
+    trail.position.z = 0.3;
+    group.add(trail);
+
+    group.position.set(x, 0.5, z);
+    group.rotation.y = angle;
+    this.world.scene.add(group);
+
+    this.tracerRounds.push({
+      mesh: group,
+      vx: Math.sin(angle) * ENEMY_BULLET_SPEED,
+      vz: -Math.cos(angle) * ENEMY_BULLET_SPEED,
+      life: 2,
+    });
+
+    // Fire muzzle flash at source
+    this.spawnMuzzleFlash(x, 0.5, z);
+  }
+
+  private updateTracerRounds(dt: number) {
+    const s = this.state;
+    for (let i = this.tracerRounds.length - 1; i >= 0; i--) {
+      const t = this.tracerRounds[i];
+      t.mesh.position.x += t.vx * dt;
+      t.mesh.position.z += t.vz * dt;
+      t.life -= dt;
+
+      // Player hit check
+      const dx = t.mesh.position.x - s.playerX;
+      const dz = t.mesh.position.z - s.playerZ;
+      if (Math.sqrt(dx * dx + dz * dz) < 0.5) {
+        if (s.inVehicle) {
+          s.vehicleHp--;
+          if (s.vehicleHp <= 0) this.dismountVehicle(true);
+        } else {
+          this.damagePlayer();
+        }
+        this.world.scene.remove(t.mesh);
+        this.tracerRounds.splice(i, 1);
+        continue;
+      }
+
+      if (t.life <= 0 || Math.abs(t.mesh.position.x) > FIELD_WIDTH ||
+          Math.abs(t.mesh.position.z - s.scrollZ) > FIELD_DEPTH) {
+        this.world.scene.remove(t.mesh);
+        this.tracerRounds.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Enhanced Death Animations ──
+  private killEnemyEnhanced(enemy: Enemy) {
+    const colors = this.getColors();
+    if (enemy.type === 'boss') {
+      // Multi-stage boss death: multiple explosions
+      for (let i = 0; i < 4; i++) {
+        const ox = (Math.random() - 0.5) * 1.5;
+        const oz = (Math.random() - 0.5) * 1.5;
+        this.createExplosion(enemy.x + ox, enemy.z + oz, 2, 0);
+      }
+      this.state.screenShake = 0.8;
+    }
+    // Spin + fade death
+    enemy.dead = true;
+    enemy.deathTimer = enemy.type === 'boss' ? 1.0 : 0.5;
+    // Scatter extra particles
+    const count = enemy.type === 'boss' ? 20 : 10;
+    for (let i = 0; i < count; i++) {
+      this.spawnParticle(enemy.x, 0.5, enemy.z, colors.enemy, 1.2);
+    }
   }
 
   // ── Main Update ──
@@ -1435,6 +1838,10 @@ export class GameSystem extends createSystem({}) {
       this.updateWaveLogic(dt);
       this.updateSupplyCrates(dt);
       this.updateFlameParticles(dt);
+      this.updateVehicles(dt);
+      this.updateMuzzleFlashes(dt);
+      this.updateTracerRounds(dt);
+      this.updateTerrainFeatures(dt);
       this.updateCamera(dt);
       this.updateTimers(dt);
       this.updateScreenShake(dt);
@@ -1509,7 +1916,8 @@ export class GameSystem extends createSystem({}) {
     }
 
     // Movement
-    const speed = s.speedBoostTimer > 0 ? s.playerSpeed * 1.5 : s.playerSpeed;
+    const vehicleSpeedMult = s.inVehicle ? 1.6 : 1;
+    const speed = (s.speedBoostTimer > 0 ? s.playerSpeed * 1.5 : s.playerSpeed) * vehicleSpeedMult;
     if (mx !== 0 || mz !== 0) {
       const mag = Math.sqrt(mx * mx + mz * mz);
       s.playerX += (mx / mag) * speed * dt;
@@ -1555,8 +1963,10 @@ export class GameSystem extends createSystem({}) {
           this.fireBullet(bx, bz, s.playerAngle, false);
           this.fireBullet(bx, bz, s.playerAngle - 0.2, false);
           this.fireBullet(bx, bz, s.playerAngle + 0.2, false);
+          this.spawnMuzzleFlash(bx + Math.sin(s.playerAngle) * 0.4, 0.6, bz - Math.cos(s.playerAngle) * 0.4);
         } else {
           this.fireBullet(bx, bz, s.playerAngle, false);
+          this.spawnMuzzleFlash(bx + Math.sin(s.playerAngle) * 0.4, 0.6, bz - Math.cos(s.playerAngle) * 0.4);
         }
 
         (this as any).audioSystem?.playShoot();
@@ -1569,6 +1979,17 @@ export class GameSystem extends createSystem({}) {
     // Grenade throw
     if (grenadeThrow) {
       this.throwGrenade(s.playerX, s.playerZ, s.playerAngle);
+    }
+
+    // Vehicle mounted gun — faster fire, wider spread
+    if (s.inVehicle && this.activeVehicle && shooting) {
+      if (this.activeVehicle.gunCooldown <= 0) {
+        this.activeVehicle.gunCooldown = 0.08; // faster than normal
+        this.fireBullet(s.playerX, s.playerZ, s.playerAngle, false, 2);
+        this.fireBullet(s.playerX, s.playerZ, s.playerAngle - 0.15, false);
+        this.fireBullet(s.playerX, s.playerZ, s.playerAngle + 0.15, false);
+        this.spawnMuzzleFlash(s.playerX + Math.sin(s.playerAngle) * 1.0, 0.55, s.playerZ - Math.cos(s.playerAngle) * 1.0);
+      }
     }
   }
 
@@ -1632,8 +2053,13 @@ export class GameSystem extends createSystem({}) {
         // Hit player
         const dx = b.mesh.position.x - s.playerX;
         const dz = b.mesh.position.z - s.playerZ;
-        if (Math.sqrt(dx * dx + dz * dz) < 0.5) {
-          this.damagePlayer();
+        if (Math.sqrt(dx * dx + dz * dz) < (s.inVehicle ? 1.0 : 0.5)) {
+          if (s.inVehicle) {
+            s.vehicleHp--;
+            if (s.vehicleHp <= 0) this.dismountVehicle(true);
+          } else {
+            this.damagePlayer();
+          }
           this.world.scene.remove(b.mesh);
           this.bullets.splice(i, 1);
         }
@@ -1688,8 +2114,21 @@ export class GameSystem extends createSystem({}) {
 
       if (e.dead) {
         e.deathTimer -= dt;
-        e.mesh.scale.setScalar(e.deathTimer / 0.3);
-        e.mesh.rotation.y += dt * 10;
+        // Enhanced death: spin faster, fade out
+        const deathMax = e.type === 'boss' ? 1.0 : 0.5;
+        const t = Math.max(0, e.deathTimer / deathMax);
+        e.mesh.scale.setScalar(t);
+        e.mesh.rotation.y += dt * (e.type === 'boss' ? 6 : 12);
+        // Fade materials
+        e.mesh.traverse((child) => {
+          if (child instanceof Mesh) {
+            const mat = child.material as MeshStandardMaterial;
+            if (mat.opacity !== undefined) {
+              mat.transparent = true;
+              mat.opacity = t;
+            }
+          }
+        });
         if (e.deathTimer <= 0) {
           this.world.scene.remove(e.mesh);
           this.enemies.splice(i, 1);
@@ -1821,16 +2260,22 @@ export class GameSystem extends createSystem({}) {
           const angle = Math.atan2(dx, dz) + Math.PI;
 
           if (e.type === 'boss') {
-            // Boss multi-shot
+            // Boss multi-shot with tracers
             for (let a = -0.3; a <= 0.3; a += 0.15) {
-              this.fireBullet(e.x, e.z, angle + a, true, 2);
+              this.fireTracerRound(e.x, e.z, angle + a);
             }
           } else if (e.type === 'tank') {
-            this.fireBullet(e.x, e.z, angle, true, 2);
+            this.fireTracerRound(e.x, e.z, angle);
           } else if (e.type === 'sniper') {
-            this.fireBullet(e.x, e.z, angle, true, 2);
+            this.fireTracerRound(e.x, e.z, angle);
           } else {
-            this.fireBullet(e.x, e.z, angle, true);
+            // 40% chance of tracer, rest normal bullet + flash
+            if (Math.random() < 0.4) {
+              this.fireTracerRound(e.x, e.z, angle);
+            } else {
+              this.fireBullet(e.x, e.z, angle, true);
+              this.spawnMuzzleFlash(e.x, 0.5, e.z);
+            }
           }
 
           (this as any).audioSystem?.playEnemyShoot();
@@ -1839,7 +2284,12 @@ export class GameSystem extends createSystem({}) {
 
       // Contact damage (non-runner)
       if (e.type !== 'runner' && dist < 0.6) {
-        this.damagePlayer();
+        if (s.inVehicle) {
+          s.vehicleHp--;
+          if (s.vehicleHp <= 0) this.dismountVehicle(true);
+        } else {
+          this.damagePlayer();
+        }
       }
 
       // Remove if too far behind player
@@ -2040,6 +2490,24 @@ export class GameSystem extends createSystem({}) {
       if (fp.life <= 0) {
         this.world.scene.remove(fp.mesh);
         this.flameParticles.splice(i, 1);
+      }
+    }
+  }
+
+  private updateTerrainFeatures(_dt: number) {
+    const s = this.state;
+    // Spawn features ahead of player periodically
+    const lastFeatureZ = this.terrainFeatures.length > 0
+      ? Math.min(...this.terrainFeatures.map(f => f.z))
+      : s.playerZ;
+    if (lastFeatureZ > s.playerZ - 60 && Math.random() < 0.01) {
+      this.spawnTerrainFeature(s.playerZ - 50 - Math.random() * 20);
+    }
+    // Remove features behind player
+    for (let i = this.terrainFeatures.length - 1; i >= 0; i--) {
+      if (this.terrainFeatures[i].z > s.playerZ + 25) {
+        this.terrainGroup.remove(this.terrainFeatures[i].mesh);
+        this.terrainFeatures.splice(i, 1);
       }
     }
   }
