@@ -129,6 +129,87 @@
               "class": "right-group"
             },
             "dataUid": "uid-12"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "id": "hud-mission-name",
+                  "class": "mission-item"
+                },
+                "dataUid": "uid-20"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "id": "hud-mission-progress",
+                  "class": "mission-item"
+                },
+                "dataUid": "uid-21"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "id": "hud-mission-brief"
+                },
+                "dataUid": "uid-22"
+              }
+            ],
+            "properties": {
+              "id": "mission-row",
+              "class": "mission-row"
+            },
+            "dataUid": "uid-19"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  "RADAR"
+                ],
+                "properties": {
+                  "id": "hud-radar-label",
+                  "class": "radar-label"
+                },
+                "dataUid": "uid-24"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "id": "hud-radar-info"
+                },
+                "dataUid": "uid-25"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [],
+                "properties": {
+                  "id": "hud-companion"
+                },
+                "dataUid": "uid-26"
+              }
+            ],
+            "properties": {
+              "id": "radar-row",
+              "class": "radar-row"
+            },
+            "dataUid": "uid-23"
           }
         ],
         "properties": {
@@ -170,7 +251,7 @@
     },
     "__id__root": {
       "content": {
-        "flexDirection": "row",
+        "flexDirection": "column",
         "alignItems": "center",
         "justifyContent": "space-between",
         "padding": "8",
@@ -209,6 +290,54 @@
       "content": {
         "fontSize": "12",
         "color": "#ff00ff"
+      }
+    },
+    "mission-row": {
+      "content": {
+        "flexDirection": "row",
+        "justifyContent": "center",
+        "gap": "12",
+        "alignItems": "center",
+        "marginTop": "4"
+      }
+    },
+    "mission-item": {
+      "content": {
+        "fontSize": "11",
+        "color": "#ffaa00"
+      }
+    },
+    "radar-row": {
+      "content": {
+        "flexDirection": "row",
+        "justifyContent": "flex-end",
+        "gap": "8",
+        "alignItems": "center",
+        "marginTop": "2"
+      }
+    },
+    "radar-label": {
+      "content": {
+        "fontSize": "10",
+        "color": "#44ccff"
+      }
+    },
+    "__id__hud-mission-brief": {
+      "content": {
+        "fontSize": "14",
+        "color": "#ff8800"
+      }
+    },
+    "__id__hud-radar-info": {
+      "content": {
+        "fontSize": "10",
+        "color": "#88ff88"
+      }
+    },
+    "__id__hud-companion": {
+      "content": {
+        "fontSize": "10",
+        "color": "#44ccff"
       }
     }
   },

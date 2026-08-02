@@ -170,6 +170,31 @@ interface TerrainFeature {
   type: 'river' | 'bunker' | 'trench';
 }
 
+interface Mission {
+  type: 'destroy' | 'rescue' | 'extraction' | 'commander';
+  name: string;
+  description: string;
+  target: number;
+  progress: number;
+  complete: boolean;
+  bonusScore: number;
+}
+
+interface Companion {
+  mesh: Group;
+  x: number;
+  z: number;
+  alive: boolean;
+  shootTimer: number;
+}
+
+interface POWCage {
+  mesh: Group;
+  x: number;
+  z: number;
+  rescued: boolean;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -223,6 +248,17 @@ export interface GameState {
   inVehicle: boolean;
   vehicleHp: number;
   vehicleTimer: number;
+  // Mission system
+  currentMission: Mission | null;
+  missionBriefTimer: number;
+  missionsCompleted: number;
+  // Companion
+  companionAlive: boolean;
+  companionKills: number;
+  // Minimap data (exposed for UI)
+  radarEnemies: { rx: number; rz: number }[];
+  radarPowerUps: { rx: number; rz: number }[];
+  radarSupplies: { rx: number; rz: number }[];
 }
 
 // ── Constants ──
@@ -272,6 +308,8 @@ export class GameSystem extends createSystem({}) {
   private tracerRounds: TracerRound[] = [];
   private terrainFeatures: TerrainFeature[] = [];
   private activeVehicle: Vehicle | null = null;
+  private companion: Companion | null = null;
+  private powCages: POWCage[] = [];
 
   init() {
     this.state = this.createDefaultState();
@@ -333,6 +371,14 @@ export class GameSystem extends createSystem({}) {
       inVehicle: false,
       vehicleHp: 0,
       vehicleTimer: 40,
+      currentMission: null,
+      missionBriefTimer: 0,
+      missionsCompleted: 0,
+      companionAlive: false,
+      companionKills: 0,
+      radarEnemies: [],
+      radarPowerUps: [],
+      radarSupplies: [],
     };
   }
 
@@ -998,6 +1044,7 @@ export class GameSystem extends createSystem({}) {
         this.state.killStreakBest = this.state.killStreak;
       }
       this.checkKillStreakRewards();
+      this.onEnemyKilledMission();
 
       // Combo
       this.state.combo++;
@@ -1364,6 +1411,16 @@ export class GameSystem extends createSystem({}) {
       this.spawnTerrainFeature(this.state.playerZ - 25 - Math.random() * 15);
     }
 
+    // Assign a mission every 2 waves starting wave 2
+    if (wave >= 2 && wave % 2 === 0) {
+      this.assignMission();
+    }
+
+    // Respawn companion if dead
+    if (this.companion && !this.companion.alive) {
+      this.respawnCompanion();
+    }
+
     (this as any).audioSystem?.playWaveStart();
   }
 
@@ -1434,7 +1491,12 @@ export class GameSystem extends createSystem({}) {
     s.vehicleTimer = 40;
 
     if (mode === 2) s.lives = 99; // Zen
+    s.currentMission = null;
+    s.missionBriefTimer = 0;
+    s.missionsCompleted = 0;
+    s.companionKills = 0;
 
+    this.spawnCompanion();
     this.startWave();
   }
 
@@ -1471,6 +1533,12 @@ export class GameSystem extends createSystem({}) {
     this.tracerRounds = [];
     for (const tf of this.terrainFeatures) this.terrainGroup.remove(tf.mesh);
     this.terrainFeatures = [];
+    if (this.companion) {
+      this.world.scene.remove(this.companion.mesh);
+      this.companion = null;
+    }
+    for (const cage of this.powCages) this.world.scene.remove(cage.mesh);
+    this.powCages = [];
   }
 
   // ── Vehicle System ──
@@ -1819,6 +1887,244 @@ export class GameSystem extends createSystem({}) {
     }
   }
 
+  // ── Mission System ──
+  private assignMission() {
+    const s = this.state;
+    const wave = s.wave;
+    const missionTypes: Mission['type'][] = ['destroy', 'rescue', 'extraction', 'commander'];
+    const pick = missionTypes[wave % missionTypes.length];
+    let mission: Mission;
+    switch (pick) {
+      case 'destroy':
+        mission = { type: 'destroy', name: 'Destroy the Base', description: 'Eliminate 8 enemies this wave', target: 8, progress: 0, complete: false, bonusScore: 500 };
+        break;
+      case 'rescue':
+        mission = { type: 'rescue', name: 'Rescue POWs', description: 'Reach all POW cages', target: 2, progress: 0, complete: false, bonusScore: 750 };
+        this.spawnPOWCages(2);
+        break;
+      case 'extraction':
+        mission = { type: 'extraction', name: 'Reach Extraction', description: 'Survive this wave', target: 1, progress: 0, complete: false, bonusScore: 400 };
+        break;
+      case 'commander':
+        mission = { type: 'commander', name: 'Eliminate Commander', description: 'Defeat the wave commander', target: 1, progress: 0, complete: false, bonusScore: 1000 };
+        // Mark a strong enemy as "commander" — spawn one if wave has enemies
+        break;
+    }
+    s.currentMission = mission;
+    s.missionBriefTimer = 3.0; // show briefing for 3 seconds
+  }
+
+  private updateMissions(_dt: number) {
+    const s = this.state;
+    if (!s.currentMission || s.currentMission.complete) return;
+    const m = s.currentMission;
+
+    if (m.type === 'extraction') {
+      // Completes when wave ends (checked in wave logic)
+      if (s.waveEnemiesLeft <= 0 && this.enemies.filter(e => !e.dead).length === 0) {
+        m.progress = 1;
+      }
+    }
+    if (m.progress >= m.target && !m.complete) {
+      m.complete = true;
+      s.score += m.bonusScore;
+      s.missionsCompleted++;
+      s.lives = Math.min(s.lives + 1, 9); // bonus life
+    }
+  }
+
+  private onEnemyKilledMission() {
+    const m = this.state.currentMission;
+    if (!m || m.complete) return;
+    if (m.type === 'destroy') m.progress++;
+    if (m.type === 'commander') m.progress++; // any boss-type kill counts
+  }
+
+  private spawnPOWCages(count: number) {
+    const s = this.state;
+    const colors = this.getColors();
+    for (let i = 0; i < count; i++) {
+      const group = new Group();
+      // Wireframe cage
+      const cageGeo = new EdgesGeometry(new BoxGeometry(0.8, 1.2, 0.8));
+      const cageMat = new LineBasicMaterial({ color: '#ffaa00' });
+      group.add(new LineSegments(cageGeo, cageMat));
+      // Person inside — small cylinder
+      const personGeo = new CylinderGeometry(0.15, 0.15, 0.8, 6);
+      const personMat = new MeshStandardMaterial({ color: 0x88aaff, emissive: new Color(colors.accent), emissiveIntensity: 0.4 });
+      const person = new Mesh(personGeo, personMat);
+      person.position.y = 0.1;
+      group.add(person);
+      const cx = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+      const cz = s.playerZ - 12 - Math.random() * 12;
+      group.position.set(cx, 0.6, cz);
+      this.world.scene.add(group);
+      this.powCages.push({ mesh: group, x: cx, z: cz, rescued: false });
+    }
+  }
+
+  private updatePOWCages() {
+    const s = this.state;
+    const m = s.currentMission;
+    for (const cage of this.powCages) {
+      if (cage.rescued) continue;
+      const dx = s.playerX - cage.x;
+      const dz = s.playerZ - cage.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 1.2) {
+        cage.rescued = true;
+        cage.mesh.visible = false;
+        if (m && m.type === 'rescue') m.progress++;
+      }
+    }
+  }
+
+  // ── AI Companion ──
+  private spawnCompanion() {
+    const s = this.state;
+    const colors = this.getColors();
+    const group = new Group();
+    // Body
+    const bodyGeo = new BoxGeometry(0.4, 0.6, 0.4);
+    const bodyMat = new MeshStandardMaterial({ color: 0x2266ff, emissive: new Color('#2288ff'), emissiveIntensity: 0.4 });
+    group.add(new Mesh(bodyGeo, bodyMat));
+    // Head
+    const headGeo = new SphereGeometry(0.18, 6, 6);
+    const headMat = new MeshStandardMaterial({ color: 0x44aaff, emissive: new Color('#44ccff'), emissiveIntensity: 0.3 });
+    const head = new Mesh(headGeo, headMat);
+    head.position.y = 0.48;
+    group.add(head);
+    // Wireframe overlay
+    const wireGeo = new EdgesGeometry(new BoxGeometry(0.5, 0.8, 0.5));
+    const wireMat = new LineBasicMaterial({ color: '#44ccff', transparent: true, opacity: 0.5 });
+    group.add(new LineSegments(wireGeo, wireMat));
+    group.position.set(s.playerX + 1.5, 0.3, s.playerZ + 0.5);
+    this.world.scene.add(group);
+    this.companion = { mesh: group, x: s.playerX + 1.5, z: s.playerZ + 0.5, alive: true, shootTimer: 0 };
+    s.companionAlive = true;
+  }
+
+  private updateCompanion(dt: number) {
+    const c = this.companion;
+    if (!c) return;
+    const s = this.state;
+
+    if (!c.alive) {
+      c.mesh.visible = false;
+      return;
+    }
+    c.mesh.visible = true;
+
+    // Follow player at offset
+    const targetX = s.playerX + 1.5;
+    const targetZ = s.playerZ + 0.5;
+    c.x += (targetX - c.x) * 3 * dt;
+    c.z += (targetZ - c.z) * 3 * dt;
+    c.mesh.position.set(c.x, 0.3, c.z);
+
+    // Auto-shoot at nearest enemy
+    c.shootTimer -= dt;
+    if (c.shootTimer <= 0) {
+      let nearest: Enemy | null = null;
+      let nearDist = 12;
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        const dx = e.x - c.x;
+        const dz = e.z - c.z;
+        const d = Math.sqrt(dx * dx + dz * dz);
+        if (d < nearDist) {
+          nearDist = d;
+          nearest = e;
+        }
+      }
+      if (nearest) {
+        const dx = nearest.x - c.x;
+        const dz = nearest.z - c.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > 0.1) {
+          this.fireCompanionBullet(c.x, c.z, dx / dist, dz / dist);
+          c.shootTimer = 0.5; // slower fire rate
+        }
+      } else {
+        c.shootTimer = 0.2;
+      }
+    }
+
+    // Companion takes damage from enemy bullets
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
+      if (!b.isEnemy) continue;
+      const dx = b.mesh.position.x - c.x;
+      const dz = b.mesh.position.z - c.z;
+      if (dx * dx + dz * dz < 0.4) {
+        this.world.scene.remove(b.mesh);
+        this.bullets.splice(i, 1);
+        c.alive = false;
+        s.companionAlive = false;
+        // Death particles
+        const colors = this.getColors();
+        for (let j = 0; j < 8; j++) {
+          this.spawnParticle(c.x, 0.5, c.z, '#4488ff', 0.8);
+        }
+        break;
+      }
+    }
+  }
+
+  private fireCompanionBullet(x: number, z: number, dx: number, dz: number) {
+    const colors = this.getColors();
+    const geo = new SphereGeometry(0.08, 4, 4);
+    const mat = new MeshBasicMaterial({ color: '#44ccff' });
+    const mesh = new Mesh(geo, mat);
+    mesh.position.set(x, 0.5, z);
+    this.world.scene.add(mesh);
+    this.bullets.push({ mesh, vx: dx * 14, vz: dz * 14, life: 1.5, isEnemy: false, damage: 1 });
+  }
+
+  private respawnCompanion() {
+    if (!this.companion) return;
+    const s = this.state;
+    this.companion.alive = true;
+    this.companion.x = s.playerX + 1.5;
+    this.companion.z = s.playerZ + 0.5;
+    this.companion.shootTimer = 1;
+    this.companion.mesh.visible = true;
+    s.companionAlive = true;
+  }
+
+  // ── Minimap/Radar Data ──
+  private updateRadarData() {
+    const s = this.state;
+    const range = 20;
+    // Enemies
+    s.radarEnemies = [];
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const rx = (e.x - s.playerX) / range;
+      const rz = (e.z - s.playerZ) / range;
+      if (Math.abs(rx) <= 1 && Math.abs(rz) <= 1) {
+        s.radarEnemies.push({ rx, rz });
+      }
+    }
+    // Power-ups
+    s.radarPowerUps = [];
+    for (const p of this.powerUps) {
+      const rx = (p.mesh.position.x - s.playerX) / range;
+      const rz = (p.mesh.position.z - s.playerZ) / range;
+      if (Math.abs(rx) <= 1 && Math.abs(rz) <= 1) {
+        s.radarPowerUps.push({ rx, rz });
+      }
+    }
+    // Supplies
+    s.radarSupplies = [];
+    for (const sc of this.supplyCrates) {
+      const rx = (sc.mesh.position.x - s.playerX) / range;
+      const rz = (sc.mesh.position.z - s.playerZ) / range;
+      if (Math.abs(rx) <= 1 && Math.abs(rz) <= 1) {
+        s.radarSupplies.push({ rx, rz });
+      }
+    }
+  }
+
   // ── Main Update ──
   update(delta: number) {
     if (!this.initialized) return;
@@ -1842,6 +2148,10 @@ export class GameSystem extends createSystem({}) {
       this.updateMuzzleFlashes(dt);
       this.updateTracerRounds(dt);
       this.updateTerrainFeatures(dt);
+      this.updateCompanion(dt);
+      this.updateMissions(dt);
+      this.updatePOWCages();
+      this.updateRadarData();
       this.updateCamera(dt);
       this.updateTimers(dt);
       this.updateScreenShake(dt);
@@ -2533,6 +2843,7 @@ export class GameSystem extends createSystem({}) {
     }
     if (s.shieldTimer > 0) s.shieldTimer -= dt;
     if (s.speedBoostTimer > 0) s.speedBoostTimer -= dt;
+    if (s.missionBriefTimer > 0) s.missionBriefTimer -= dt;
     if (s.comboTimer > 0) {
       s.comboTimer -= dt;
       if (s.comboTimer <= 0) {

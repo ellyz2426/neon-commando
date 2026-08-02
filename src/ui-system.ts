@@ -421,6 +421,35 @@ export class UISystem extends createSystem({
     } else {
       setText(this.hudDoc, 'hud-streak', '');
     }
+
+    // Mission display
+    const m = s.currentMission;
+    if (m && !m.complete) {
+      if (s.missionBriefTimer > 0) {
+        setText(this.hudDoc, 'hud-mission-brief', `MISSION: ${m.description}`);
+      } else {
+        setText(this.hudDoc, 'hud-mission-brief', '');
+      }
+      setText(this.hudDoc, 'hud-mission-name', m.name);
+      setText(this.hudDoc, 'hud-mission-progress', `${m.progress}/${m.target}`);
+    } else if (m && m.complete) {
+      setText(this.hudDoc, 'hud-mission-name', 'MISSION COMPLETE!');
+      setText(this.hudDoc, 'hud-mission-progress', `+${m.bonusScore}`);
+      setText(this.hudDoc, 'hud-mission-brief', '');
+    } else {
+      setText(this.hudDoc, 'hud-mission-name', '');
+      setText(this.hudDoc, 'hud-mission-progress', '');
+      setText(this.hudDoc, 'hud-mission-brief', '');
+    }
+
+    // Radar info text
+    const eCount = s.radarEnemies.length;
+    const pCount = s.radarPowerUps.length;
+    const sCount = s.radarSupplies.length;
+    setText(this.hudDoc, 'hud-radar-info', `E:${eCount} P:${pCount} S:${sCount}`);
+
+    // Companion status
+    setText(this.hudDoc, 'hud-companion', s.companionAlive ? 'ALLY: ACTIVE' : 'ALLY: DOWN');
   }
 
   private updateResults(s: GameState) {
