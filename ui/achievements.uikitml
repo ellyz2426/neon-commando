@@ -1,0 +1,73 @@
+<panel>
+  <style>
+    #root {
+      flex-direction: column;
+      align-items: center;
+      padding: 16;
+      gap: 6;
+      background-color: rgba(10, 26, 10, 0.95);
+      border-radius: 16;
+      border-color: #ffaa00;
+      border-width: 2;
+    }
+    #ach-title {
+      font-size: 22;
+      color: #ffaa00;
+    }
+    #ach-count {
+      font-size: 12;
+      color: #88ccaa;
+    }
+    .ach-row {
+      font-size: 11;
+      color: #00ff88;
+    }
+    .ach-locked {
+      font-size: 11;
+      color: #445544;
+    }
+    .close-btn {
+      font-size: 14;
+      color: #ff4444;
+      background-color: rgba(255, 68, 68, 0.1);
+      padding: 6;
+      border-radius: 6;
+      border-color: #ff4444;
+      border-width: 1;
+      margin-top: 6;
+      min-width: 80;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+  <div id="root">
+    <div id="ach-title">ACHIEVEMENTS</div>
+    <div id="ach-count">0 / 25 Unlocked</div>
+    <div id="ach-0" class="ach-locked">🔒 First Blood — 50 kills</div>
+    <div id="ach-1" class="ach-locked">🔒 Veteran — 100 kills</div>
+    <div id="ach-2" class="ach-locked">🔒 Warmonger — 500 kills</div>
+    <div id="ach-3" class="ach-locked">🔒 Legend — 1000 kills</div>
+    <div id="ach-4" class="ach-locked">🔒 Survivor — Reach wave 10</div>
+    <div id="ach-5" class="ach-locked">🔒 Hardened — Reach wave 25</div>
+    <div id="ach-6" class="ach-locked">🔒 Unstoppable — Reach wave 50</div>
+    <div id="ach-7" class="ach-locked">🔒 Spread Eagle — Get spread shot</div>
+    <div id="ach-8" class="ach-locked">🔒 Rapid Fire — Get rapid fire</div>
+    <div id="ach-9" class="ach-locked">🔒 Pyromaniac — Get flamethrower</div>
+    <div id="ach-10" class="ach-locked">🔒 Beam Master — Get beam weapon</div>
+    <div id="ach-11" class="ach-locked">🔒 Laser Precision — Get laser</div>
+    <div id="ach-12" class="ach-locked">🔒 Hot Streak — 5 kill streak</div>
+    <div id="ach-13" class="ach-locked">🔒 Rampage — 10 kill streak</div>
+    <div id="ach-14" class="ach-locked">🔒 Massacre — 15 kill streak</div>
+    <div id="ach-15" class="ach-locked">🔒 Godlike — 25 kill streak</div>
+    <div id="ach-16" class="ach-locked">🔒 Road Warrior — 10 vehicle kills</div>
+    <div id="ach-17" class="ach-locked">🔒 Tank Commander — 25 vehicle kills</div>
+    <div id="ach-18" class="ach-locked">🔒 Operative — Complete 3 missions</div>
+    <div id="ach-19" class="ach-locked">🔒 Elite Agent — Complete 10 missions</div>
+    <div id="ach-20" class="ach-locked">🔒 Mech Slayer — Defeat mech boss</div>
+    <div id="ach-21" class="ach-locked">🔒 Artillery Wrecker — Defeat artillery boss</div>
+    <div id="ach-22" class="ach-locked">🔒 Chopper Down — Defeat helicopter boss</div>
+    <div id="ach-23" class="ach-locked">🔒 Score Chaser — Score 10,000</div>
+    <div id="ach-24" class="ach-locked">🔒 High Roller — Score 50,000</div>
+    <div id="btn-close-achievements" class="close-btn">Close</div>
+  </div>
+</panel>

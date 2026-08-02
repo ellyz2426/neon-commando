@@ -103,6 +103,7 @@
       <div id="btn-settings" class="nav-btn">Settings</div>
       <div id="btn-stats" class="nav-btn">Stats</div>
       <div id="btn-tutorial" class="nav-btn">Controls</div>
+      <div id="btn-achievements" class="nav-btn">Medals</div>
     </div>
     <div id="highscore">High Score: 0</div>
   </div>

@@ -1,0 +1,400 @@
+{
+  "element": {
+    "type": "container",
+    "sourceTag": "div",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "ACHIEVEMENTS"
+        ],
+        "properties": {
+          "id": "ach-title"
+        },
+        "dataUid": "uid-2"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "0 / 25 Unlocked"
+        ],
+        "properties": {
+          "id": "ach-count"
+        },
+        "dataUid": "uid-3"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 First Blood — 50 kills"
+        ],
+        "properties": {
+          "id": "ach-0",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-4"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Veteran — 100 kills"
+        ],
+        "properties": {
+          "id": "ach-1",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-5"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Warmonger — 500 kills"
+        ],
+        "properties": {
+          "id": "ach-2",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-6"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Legend — 1000 kills"
+        ],
+        "properties": {
+          "id": "ach-3",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-7"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Survivor — Reach wave 10"
+        ],
+        "properties": {
+          "id": "ach-4",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-8"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Hardened — Reach wave 25"
+        ],
+        "properties": {
+          "id": "ach-5",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-9"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Unstoppable — Reach wave 50"
+        ],
+        "properties": {
+          "id": "ach-6",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-10"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Spread Eagle — Get spread shot"
+        ],
+        "properties": {
+          "id": "ach-7",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-11"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Rapid Fire — Get rapid fire"
+        ],
+        "properties": {
+          "id": "ach-8",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-12"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Pyromaniac — Get flamethrower"
+        ],
+        "properties": {
+          "id": "ach-9",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-13"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Beam Master — Get beam weapon"
+        ],
+        "properties": {
+          "id": "ach-10",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-14"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Laser Precision — Get laser"
+        ],
+        "properties": {
+          "id": "ach-11",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-15"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Hot Streak — 5 kill streak"
+        ],
+        "properties": {
+          "id": "ach-12",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-16"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Rampage — 10 kill streak"
+        ],
+        "properties": {
+          "id": "ach-13",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-17"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Massacre — 15 kill streak"
+        ],
+        "properties": {
+          "id": "ach-14",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-18"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Godlike — 25 kill streak"
+        ],
+        "properties": {
+          "id": "ach-15",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-19"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Road Warrior — 10 vehicle kills"
+        ],
+        "properties": {
+          "id": "ach-16",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-20"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Tank Commander — 25 vehicle kills"
+        ],
+        "properties": {
+          "id": "ach-17",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-21"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Operative — Complete 3 missions"
+        ],
+        "properties": {
+          "id": "ach-18",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-22"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Elite Agent — Complete 10 missions"
+        ],
+        "properties": {
+          "id": "ach-19",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-23"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Mech Slayer — Defeat mech boss"
+        ],
+        "properties": {
+          "id": "ach-20",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-24"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Artillery Wrecker — Defeat artillery boss"
+        ],
+        "properties": {
+          "id": "ach-21",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-25"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Chopper Down — Defeat helicopter boss"
+        ],
+        "properties": {
+          "id": "ach-22",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-26"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 Score Chaser — Score 10,000"
+        ],
+        "properties": {
+          "id": "ach-23",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-27"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "🔒 High Roller — Score 50,000"
+        ],
+        "properties": {
+          "id": "ach-24",
+          "class": "ach-locked"
+        },
+        "dataUid": "uid-28"
+      },
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          "Close"
+        ],
+        "properties": {
+          "id": "btn-close-achievements",
+          "class": "close-btn"
+        },
+        "dataUid": "uid-29"
+      }
+    ],
+    "properties": {
+      "id": "root"
+    },
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "__id__root": {
+      "content": {
+        "flexDirection": "column",
+        "alignItems": "center",
+        "padding": 16,
+        "gap": 6,
+        "backgroundColor": "rgba(10, 26, 10, 0.95)",
+        "borderRadius": 16,
+        "borderColor": "#ffaa00",
+        "borderWidth": 2
+      }
+    },
+    "__id__ach-title": {
+      "content": {
+        "fontSize": 22,
+        "color": "#ffaa00"
+      }
+    },
+    "__id__ach-count": {
+      "content": {
+        "fontSize": 12,
+        "color": "#88ccaa"
+      }
+    },
+    "ach-row": {
+      "content": {
+        "fontSize": 11,
+        "color": "#00ff88"
+      }
+    },
+    "ach-locked": {
+      "content": {
+        "fontSize": 11,
+        "color": "#445544"
+      }
+    },
+    "close-btn": {
+      "content": {
+        "fontSize": 14,
+        "color": "#ff4444",
+        "backgroundColor": "rgba(255, 68, 68, 0.1)",
+        "padding": 6,
+        "borderRadius": 6,
+        "borderColor": "#ff4444",
+        "borderWidth": 1,
+        "marginTop": 6,
+        "minWidth": 80,
+        "alignItems": "center",
+        "justifyContent": "center"
+      }
+    }
+  },
+  "ranges": {}
+}

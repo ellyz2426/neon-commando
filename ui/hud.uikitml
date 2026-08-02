@@ -35,6 +35,10 @@
       font-size: 12;
       color: #ff00ff;
     }
+    #hud-achievement {
+      font-size: 12;
+      color: #ffaa00;
+    }
     .left-group {
       flex-direction: row;
       gap: 12;
@@ -62,6 +66,7 @@
       <div id="hud-shield"></div>
       <div id="hud-streak"></div>
       <div id="hud-timer"></div>
+      <div id="hud-achievement"></div>
     </div>
     <div class="right-group">
       <div id="hud-lives" class="hud-item">Lives: 3</div>

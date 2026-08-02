@@ -145,6 +145,68 @@ export class AudioSystem extends createSystem({}) {
     this.playTone(500, 0.08, 'square', 0.15);
   }
 
+  playVehicleMount() {
+    this.playTone(200, 0.15, 'sawtooth', 0.2);
+    setTimeout(() => this.playTone(350, 0.12, 'square', 0.15), 80);
+    setTimeout(() => this.playTone(500, 0.1, 'sine', 0.2), 160);
+  }
+
+  playVehicleDismount() {
+    this.playTone(500, 0.1, 'square', 0.15);
+    setTimeout(() => this.playTone(300, 0.12, 'sawtooth', 0.15), 80);
+  }
+
+  playVehicleGun() {
+    this.playTone(700, 0.05, 'square', 0.15);
+    this.playTone(1000, 0.04, 'sawtooth', 0.1);
+  }
+
+  playSupplyDrop() {
+    this.playTone(150, 0.2, 'sine', 0.2);
+    setTimeout(() => this.playTone(200, 0.15, 'triangle', 0.15), 100);
+    setTimeout(() => this.playTone(100, 0.3, 'sine', 0.25), 200);
+  }
+
+  playMissionComplete() {
+    this.playTone(600, 0.15, 'sine', 0.25);
+    setTimeout(() => this.playTone(800, 0.15, 'sine', 0.25), 100);
+    setTimeout(() => this.playTone(1000, 0.15, 'sine', 0.25), 200);
+    setTimeout(() => this.playTone(1200, 0.25, 'sine', 0.3), 300);
+  }
+
+  playAchievementUnlock() {
+    this.playTone(800, 0.1, 'sine', 0.2);
+    setTimeout(() => this.playTone(1000, 0.1, 'sine', 0.2), 70);
+    setTimeout(() => this.playTone(1200, 0.1, 'sine', 0.2), 140);
+    setTimeout(() => this.playTone(1600, 0.2, 'sine', 0.3), 210);
+  }
+
+  playCompanionShoot() {
+    this.playTone(660, 0.06, 'square', 0.1);
+    this.playTone(900, 0.04, 'sawtooth', 0.08);
+  }
+
+  playCompanionDeath() {
+    this.playTone(300, 0.2, 'triangle', 0.2);
+    setTimeout(() => this.playTone(150, 0.3, 'triangle', 0.15), 100);
+  }
+
+  playBossEntrance() {
+    if (!this.ctx || !this.sfxGain) return;
+    this.ensureCtx();
+    // Low rumble + alarm
+    this.playTone(40, 0.5, 'sine', 0.3);
+    this.playTone(60, 0.4, 'sawtooth', 0.15);
+    setTimeout(() => {
+      this.playTone(400, 0.15, 'square', 0.25);
+      this.playTone(600, 0.15, 'square', 0.2);
+    }, 200);
+    setTimeout(() => {
+      this.playTone(400, 0.15, 'square', 0.25);
+      this.playTone(600, 0.15, 'square', 0.2);
+    }, 500);
+  }
+
   // Ambient military march music
   startMusic() {
     if (this.musicPlaying || !this.ctx || !this.musicGain) return;

@@ -255,6 +255,10 @@ export interface GameState {
   // Companion
   companionAlive: boolean;
   companionKills: number;
+  // Vehicle kills tracking
+  vehicleKills: number;
+  // Boss type tracking
+  bossType: string;
   // Minimap data (exposed for UI)
   radarEnemies: { rx: number; rz: number }[];
   radarPowerUps: { rx: number; rz: number }[];
@@ -310,10 +314,14 @@ export class GameSystem extends createSystem({}) {
   private activeVehicle: Vehicle | null = null;
   private companion: Companion | null = null;
   private powCages: POWCage[] = [];
+  private achievements: Map<string, boolean> = new Map();
+  private achievementQueue: string[] = [];
+  private achievementTimer = 0;
 
   init() {
     this.state = this.createDefaultState();
     this.loadHighScore();
+    this.loadAchievements();
     this.setupScene();
     this.initialized = true;
   }
@@ -376,6 +384,8 @@ export class GameSystem extends createSystem({}) {
       missionsCompleted: 0,
       companionAlive: false,
       companionKills: 0,
+      vehicleKills: 0,
+      bossType: 'boss',
       radarEnemies: [],
       radarPowerUps: [],
       radarSupplies: [],
@@ -413,6 +423,7 @@ export class GameSystem extends createSystem({}) {
         totalWaves: this.state.totalWaves,
         totalDeaths: this.state.totalDeaths,
       }));
+      this.checkScoreAchievements();
     } catch {}
   }
 
@@ -766,9 +777,83 @@ export class GameSystem extends createSystem({}) {
         }
         break;
       }
+      case 'artillery': {
+        hp = 20 + this.state.wave * 2; points = 2500; speed = 0; shootInterval = 1.2; aggroRange = 30;
+        // Large stationary cannon
+        const baseGeo = new BoxGeometry(1.8, 0.5, 1.8);
+        const baseMat = new MeshStandardMaterial({ color: 0x664400, emissive: new Color(0xff6600), emissiveIntensity: 0.3 });
+        group.add(new Mesh(baseGeo, baseMat));
+        // Rotating turret platform
+        const turretBaseGeo = new CylinderGeometry(0.6, 0.7, 0.4, 8);
+        const turretBase = new Mesh(turretBaseGeo, baseMat);
+        turretBase.position.y = 0.45;
+        turretBase.name = 'turretBase';
+        group.add(turretBase);
+        // Cannon barrel
+        const cannonGeo = new CylinderGeometry(0.15, 0.2, 1.5, 8);
+        const cannonMat = new MeshStandardMaterial({ color: 0x888888, emissive: new Color(0xff4400), emissiveIntensity: 0.4 });
+        const cannon = new Mesh(cannonGeo, cannonMat);
+        cannon.rotation.x = Math.PI / 2;
+        cannon.position.set(0, 0.65, -0.8);
+        cannon.name = 'cannon';
+        group.add(cannon);
+        // Armor plates
+        for (let s = -1; s <= 1; s += 2) {
+          const plateGeo = new BoxGeometry(0.15, 0.6, 1.0);
+          const plate = new Mesh(plateGeo, baseMat);
+          plate.position.set(s * 0.9, 0.3, 0);
+          group.add(plate);
+        }
+        break;
+      }
+      case 'attack_heli': {
+        hp = 18 + this.state.wave * 2; points = 3000; speed = 3; shootInterval = 0.6; aggroRange = 30;
+        // Attack helicopter boss — bigger than regular heli
+        const fuselageGeo = new BoxGeometry(0.7, 0.5, 1.8);
+        const fuselageMat = new MeshStandardMaterial({ color: 0x222222, emissive: new Color(0xff0044), emissiveIntensity: 0.4 });
+        group.add(new Mesh(fuselageGeo, fuselageMat));
+        // Cockpit
+        const cockpitGeo = new SphereGeometry(0.35, 8, 6);
+        const cockpitMat = new MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.7 });
+        const aCockpit = new Mesh(cockpitGeo, cockpitMat);
+        aCockpit.position.set(0, 0.1, -0.9);
+        group.add(aCockpit);
+        // Main rotor
+        const mainRotorGeo = new BoxGeometry(3.0, 0.05, 0.15);
+        const rotorMat = new MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.5 });
+        const mainRotor = new Mesh(mainRotorGeo, rotorMat);
+        mainRotor.position.y = 0.4;
+        mainRotor.name = 'rotor';
+        group.add(mainRotor);
+        // Tail boom
+        const tailGeo = new BoxGeometry(0.15, 0.15, 1.2);
+        const tail = new Mesh(tailGeo, fuselageMat);
+        tail.position.set(0, 0.1, 1.2);
+        group.add(tail);
+        // Tail rotor
+        const tailRotorGeo = new BoxGeometry(0.05, 0.6, 0.05);
+        const tailRotor = new Mesh(tailRotorGeo, rotorMat);
+        tailRotor.position.set(0, 0.2, 1.8);
+        tailRotor.name = 'tailRotor';
+        group.add(tailRotor);
+        // Stub wings with rockets
+        for (let s = -1; s <= 1; s += 2) {
+          const wingGeo = new BoxGeometry(0.8, 0.08, 0.3);
+          const wing = new Mesh(wingGeo, fuselageMat);
+          wing.position.set(s * 0.7, -0.1, 0);
+          group.add(wing);
+          const rocketGeo = new CylinderGeometry(0.06, 0.06, 0.4, 6);
+          const rocket = new Mesh(rocketGeo, new MeshStandardMaterial({ color: 0xaa4400 }));
+          rocket.rotation.x = Math.PI / 2;
+          rocket.position.set(s * 0.9, -0.15, -0.1);
+          group.add(rocket);
+        }
+        group.position.y = 4;
+        break;
+      }
     }
 
-    group.position.set(x, type === 'helicopter' ? 3 : 0, z);
+    group.position.set(x, type === 'helicopter' || type === 'attack_heli' ? (type === 'attack_heli' ? 4 : 3) : 0, z);
     this.world.scene.add(group);
 
     // Difficulty scaling
@@ -1040,11 +1125,13 @@ export class GameSystem extends createSystem({}) {
       this.state.kills++;
       this.state.totalKills++;
       this.state.killStreak++;
+      if (this.state.inVehicle) this.state.vehicleKills++;
       if (this.state.killStreak > this.state.killStreakBest) {
         this.state.killStreakBest = this.state.killStreak;
       }
       this.checkKillStreakRewards();
       this.onEnemyKilledMission();
+      this.checkKillAchievements();
 
       // Combo
       this.state.combo++;
@@ -1152,6 +1239,7 @@ export class GameSystem extends createSystem({}) {
         this.state.weaponTimer = 12;
         break;
     }
+    this.checkWeaponAchievements(type);
   }
 
   // ── Wave Management ──
@@ -1190,7 +1278,7 @@ export class GameSystem extends createSystem({}) {
     s.screenShake = 1.0;
     // Destroy all non-boss enemies
     for (const enemy of this.enemies) {
-      if (!enemy.dead && enemy.type !== 'boss') {
+      if (!enemy.dead && enemy.type !== 'boss' && enemy.type !== 'artillery' && enemy.type !== 'attack_heli') {
         enemy.hp = 0;
         enemy.dead = true;
         enemy.deathTimer = 0.3;
@@ -1332,6 +1420,7 @@ export class GameSystem extends createSystem({}) {
       bobTimer: 0,
       life: 15,
     });
+    (this as any).audioSystem?.playSupplyDrop();
   }
 
   // ── Enemy Formation Spawning ──
@@ -1384,13 +1473,28 @@ export class GameSystem extends createSystem({}) {
     const diffMult = [1, 1.3, 1.6][this.state.difficulty];
     this.state.waveEnemiesLeft = Math.floor(baseCount * diffMult);
 
-    // Boss every 5 waves
-    if (wave % 5 === 0) {
+    // Boss rotation: mech every 5th (5,20,35..), artillery every 10th (10,25,40..), helicopter every 15th (15,30,45..)
+    let bossType: string | null = null;
+    if (wave % 15 === 0) bossType = 'attack_heli';
+    else if (wave % 10 === 0) bossType = 'artillery';
+    else if (wave % 5 === 0) bossType = 'boss';
+
+    if (bossType) {
       this.state.bossActive = true;
-      const boss = this.createEnemy('boss', 0, this.state.playerZ - 15);
+      this.state.bossType = bossType;
+      const boss = this.createEnemy(bossType, 0, this.state.playerZ - 15);
       this.state.bossEntity = boss;
       this.enemies.push(boss);
       this.state.waveEnemiesLeft--;
+      (this as any).audioSystem?.playBossEntrance();
+      // Artillery spawns soldier adds
+      if (bossType === 'artillery') {
+        for (let i = 0; i < 3; i++) {
+          const ax = (Math.random() - 0.5) * 8;
+          const az = this.state.playerZ - 12 - Math.random() * 6;
+          this.enemies.push(this.createEnemy('soldier', ax, az));
+        }
+      }
     }
 
     // Spawn obstacles
@@ -1405,6 +1509,7 @@ export class GameSystem extends createSystem({}) {
     }
 
     this.state.totalWaves = Math.max(this.state.totalWaves, wave);
+    this.checkWaveAchievements();
 
     // Spawn terrain features ahead
     if (wave >= 2 && Math.random() < 0.6) {
@@ -1615,7 +1720,7 @@ export class GameSystem extends createSystem({}) {
     // Hide indicator ring
     const ring = v.mesh.getObjectByName('indicator');
     if (ring) ring.visible = false;
-    (this as any).audioSystem?.playPowerUp();
+    (this as any).audioSystem?.playVehicleMount();
   }
 
   private dismountVehicle(eject: boolean) {
@@ -1634,6 +1739,7 @@ export class GameSystem extends createSystem({}) {
       }
       this.activeVehicle = null;
     }
+    (this as any).audioSystem?.playVehicleDismount();
   }
 
   private updateVehicles(dt: number) {
@@ -1868,7 +1974,8 @@ export class GameSystem extends createSystem({}) {
   // ── Enhanced Death Animations ──
   private killEnemyEnhanced(enemy: Enemy) {
     const colors = this.getColors();
-    if (enemy.type === 'boss') {
+    const isBossType = enemy.type === 'boss' || enemy.type === 'artillery' || enemy.type === 'attack_heli';
+    if (isBossType) {
       // Multi-stage boss death: multiple explosions
       for (let i = 0; i < 4; i++) {
         const ox = (Math.random() - 0.5) * 1.5;
@@ -1879,9 +1986,9 @@ export class GameSystem extends createSystem({}) {
     }
     // Spin + fade death
     enemy.dead = true;
-    enemy.deathTimer = enemy.type === 'boss' ? 1.0 : 0.5;
+    enemy.deathTimer = isBossType ? 1.0 : 0.5;
     // Scatter extra particles
-    const count = enemy.type === 'boss' ? 20 : 10;
+    const count = isBossType ? 20 : 10;
     for (let i = 0; i < count; i++) {
       this.spawnParticle(enemy.x, 0.5, enemy.z, colors.enemy, 1.2);
     }
@@ -1930,6 +2037,8 @@ export class GameSystem extends createSystem({}) {
       s.score += m.bonusScore;
       s.missionsCompleted++;
       s.lives = Math.min(s.lives + 1, 9); // bonus life
+      (this as any).audioSystem?.playMissionComplete();
+      this.checkMissionAchievements();
     }
   }
 
@@ -2060,6 +2169,7 @@ export class GameSystem extends createSystem({}) {
         this.bullets.splice(i, 1);
         c.alive = false;
         s.companionAlive = false;
+        (this as any).audioSystem?.playCompanionDeath();
         // Death particles
         const colors = this.getColors();
         for (let j = 0; j < 8; j++) {
@@ -2078,9 +2188,8 @@ export class GameSystem extends createSystem({}) {
     mesh.position.set(x, 0.5, z);
     this.world.scene.add(mesh);
     this.bullets.push({ mesh, vx: dx * 14, vz: dz * 14, life: 1.5, isEnemy: false, damage: 1 });
-  }
-
-  private respawnCompanion() {
+    (this as any).audioSystem?.playCompanionShoot();
+  }  private respawnCompanion() {
     if (!this.companion) return;
     const s = this.state;
     this.companion.alive = true;
@@ -2299,6 +2408,7 @@ export class GameSystem extends createSystem({}) {
         this.fireBullet(s.playerX, s.playerZ, s.playerAngle - 0.15, false);
         this.fireBullet(s.playerX, s.playerZ, s.playerAngle + 0.15, false);
         this.spawnMuzzleFlash(s.playerX + Math.sin(s.playerAngle) * 1.0, 0.55, s.playerZ - Math.cos(s.playerAngle) * 1.0);
+        (this as any).audioSystem?.playVehicleGun();
       }
     }
   }
@@ -2379,7 +2489,7 @@ export class GameSystem extends createSystem({}) {
           if (enemy.dead) continue;
           const dx = b.mesh.position.x - enemy.x;
           const dz = b.mesh.position.z - enemy.z;
-          const hitRadius = enemy.type === 'tank' || enemy.type === 'boss' ? 0.8 : 0.5;
+          const hitRadius = enemy.type === 'tank' || enemy.type === 'boss' || enemy.type === 'artillery' || enemy.type === 'attack_heli' ? 0.8 : 0.5;
           if (Math.sqrt(dx * dx + dz * dz) < hitRadius) {
             this.damageEnemy(enemy, b.damage);
             this.world.scene.remove(b.mesh);
@@ -2425,10 +2535,11 @@ export class GameSystem extends createSystem({}) {
       if (e.dead) {
         e.deathTimer -= dt;
         // Enhanced death: spin faster, fade out
-        const deathMax = e.type === 'boss' ? 1.0 : 0.5;
+        const isBoss = e.type === 'boss' || e.type === 'artillery' || e.type === 'attack_heli';
+        const deathMax = isBoss ? 1.0 : 0.5;
         const t = Math.max(0, e.deathTimer / deathMax);
         e.mesh.scale.setScalar(t);
-        e.mesh.rotation.y += dt * (e.type === 'boss' ? 6 : 12);
+        e.mesh.rotation.y += dt * (isBoss ? 6 : 12);
         // Fade materials
         e.mesh.traverse((child) => {
           if (child instanceof Mesh) {
@@ -2444,6 +2555,8 @@ export class GameSystem extends createSystem({}) {
           this.enemies.splice(i, 1);
           if (e === s.bossEntity) {
             s.bossActive = false;
+            // Track boss type achievements
+            this.checkBossAchievement(s.bossType);
             s.bossEntity = null;
           }
         }
@@ -2522,6 +2635,22 @@ export class GameSystem extends createSystem({}) {
               e.vz = -(dz / dist) * e.speed * 0.5;
             }
           }
+        } else if (e.type === 'artillery') {
+          // Stationary — no movement, just rotate turret toward player
+          e.vx = 0;
+          e.vz = 0;
+          const tBase = e.mesh.getObjectByName('turretBase');
+          if (tBase) tBase.rotation.y = Math.atan2(dx, dz);
+        } else if (e.type === 'attack_heli') {
+          // Circular flight pattern overhead, varies altitude
+          const circPhase = e.moveTimer * 0.4;
+          const radius = 8 + Math.sin(e.moveTimer * 0.2) * 3;
+          const targetX = s.playerX + Math.cos(circPhase) * radius;
+          const targetZ = s.playerZ + Math.sin(circPhase) * radius;
+          e.vx = (targetX - e.x) * 0.6;
+          e.vz = (targetZ - e.z) * 0.6;
+          // Altitude wobble
+          e.mesh.position.y = 4 + Math.sin(e.moveTimer * 1.5) * 0.5;
         } else if (e.type === 'tank') {
           // Slow advance
           if (dist > 5) {
@@ -2549,7 +2678,7 @@ export class GameSystem extends createSystem({}) {
       e.x += e.vx * dt;
       e.z += e.vz * dt;
       e.x = Math.max(-FIELD_WIDTH / 2 + 0.5, Math.min(FIELD_WIDTH / 2 - 0.5, e.x));
-      e.mesh.position.set(e.x, e.type === 'helicopter' ? 3 : 0, e.z);
+      e.mesh.position.set(e.x, e.type === 'helicopter' ? 3 : e.type === 'attack_heli' ? e.mesh.position.y : 0, e.z);
 
       // Face player
       if (dist > 0.1) {
@@ -2557,9 +2686,13 @@ export class GameSystem extends createSystem({}) {
       }
 
       // Helicopter rotor spin
-      if (e.type === 'helicopter') {
+      if (e.type === 'helicopter' || e.type === 'attack_heli') {
         const rotor = e.mesh.getObjectByName('rotor');
-        if (rotor) rotor.rotation.y += dt * 15;
+        if (rotor) rotor.rotation.y += dt * (e.type === 'attack_heli' ? 20 : 15);
+        if (e.type === 'attack_heli') {
+          const tailRotor = e.mesh.getObjectByName('tailRotor');
+          if (tailRotor) tailRotor.rotation.z += dt * 25;
+        }
       }
 
       // Shooting
@@ -2573,6 +2706,27 @@ export class GameSystem extends createSystem({}) {
             // Boss multi-shot with tracers
             for (let a = -0.3; a <= 0.3; a += 0.15) {
               this.fireTracerRound(e.x, e.z, angle + a);
+            }
+          } else if (e.type === 'artillery') {
+            // Artillery: explosive arc shells — fire tracers in a spread + create explosion at target area
+            for (let a = -0.15; a <= 0.15; a += 0.15) {
+              this.fireTracerRound(e.x, e.z, angle + a);
+            }
+            // Delayed explosion near player area
+            const exDist = Math.min(dist, 8);
+            const exX = e.x + Math.sin(angle + Math.PI) * exDist + (Math.random() - 0.5) * 3;
+            const exZ = e.z + Math.cos(angle + Math.PI) * exDist + (Math.random() - 0.5) * 3;
+            this.createExplosion(exX, exZ, 2.5, 1);
+            (this as any).audioSystem?.playExplosion();
+          } else if (e.type === 'attack_heli') {
+            // Attack heli: machine gun bursts + occasional bomb drop
+            for (let a = -0.1; a <= 0.1; a += 0.1) {
+              this.fireTracerRound(e.x, e.z, angle + a);
+            }
+            // Drop bomb every 3rd shot cycle
+            if (Math.floor(e.moveTimer * 2) % 3 === 0) {
+              this.createExplosion(s.playerX + (Math.random() - 0.5) * 4, s.playerZ + (Math.random() - 0.5) * 4, 3, 2);
+              (this as any).audioSystem?.playExplosion();
             }
           } else if (e.type === 'tank') {
             this.fireTracerRound(e.x, e.z, angle);
@@ -2892,6 +3046,115 @@ export class GameSystem extends createSystem({}) {
       }
     }
   }
+
+  // ── Achievement System ──
+  private static readonly ACHIEVEMENT_DEFS: Array<{ id: string; label: string }> = [
+    { id: 'kill_50', label: '🏆 First Blood — 50 kills' },
+    { id: 'kill_100', label: '🏆 Veteran — 100 kills' },
+    { id: 'kill_500', label: '🏆 Warmonger — 500 kills' },
+    { id: 'kill_1000', label: '🏆 Legend — 1000 kills' },
+    { id: 'wave_10', label: '🏆 Survivor — Reach wave 10' },
+    { id: 'wave_25', label: '🏆 Hardened — Reach wave 25' },
+    { id: 'wave_50', label: '🏆 Unstoppable — Reach wave 50' },
+    { id: 'weapon_spread', label: '🏆 Spread Eagle — Get spread shot' },
+    { id: 'weapon_rapid', label: '🏆 Rapid Fire — Get rapid fire' },
+    { id: 'weapon_flamethrower', label: '🏆 Pyromaniac — Get flamethrower' },
+    { id: 'weapon_beam', label: '🏆 Beam Master — Get beam weapon' },
+    { id: 'weapon_laser', label: '🏆 Laser Precision — Get laser' },
+    { id: 'streak_5', label: '🏆 Hot Streak — 5 kill streak' },
+    { id: 'streak_10', label: '🏆 Rampage — 10 kill streak' },
+    { id: 'streak_15', label: '🏆 Massacre — 15 kill streak' },
+    { id: 'streak_25', label: '🏆 Godlike — 25 kill streak' },
+    { id: 'vehicle_10', label: '🏆 Road Warrior — 10 vehicle kills' },
+    { id: 'vehicle_25', label: '🏆 Tank Commander — 25 vehicle kills' },
+    { id: 'mission_3', label: '🏆 Operative — Complete 3 missions' },
+    { id: 'mission_10', label: '🏆 Elite Agent — Complete 10 missions' },
+    { id: 'boss_mech', label: '🏆 Mech Slayer — Defeat mech boss' },
+    { id: 'boss_artillery', label: '🏆 Artillery Wrecker — Defeat artillery' },
+    { id: 'boss_heli', label: '🏆 Chopper Down — Defeat helicopter boss' },
+    { id: 'score_10k', label: '🏆 Score Chaser — Score 10,000' },
+    { id: 'score_50k', label: '🏆 High Roller — Score 50,000' },
+  ];
+
+  private loadAchievements() {
+    try {
+      const data = localStorage.getItem('neon-commando-achievements');
+      if (data) {
+        const obj = JSON.parse(data) as Record<string, boolean>;
+        for (const [k, v] of Object.entries(obj)) {
+          if (v) this.achievements.set(k, true);
+        }
+      }
+    } catch {}
+  }
+
+  private saveAchievements() {
+    try {
+      const obj: Record<string, boolean> = {};
+      for (const [k, v] of this.achievements) obj[k] = v;
+      localStorage.setItem('neon-commando-achievements', JSON.stringify(obj));
+    } catch {}
+  }
+
+  private unlockAchievement(id: string) {
+    if (this.achievements.has(id)) return;
+    this.achievements.set(id, true);
+    this.achievementQueue.push(id);
+    this.saveAchievements();
+    (this as any).audioSystem?.playAchievementUnlock();
+  }
+
+  private checkKillAchievements() {
+    const k = this.state.totalKills;
+    if (k >= 50) this.unlockAchievement('kill_50');
+    if (k >= 100) this.unlockAchievement('kill_100');
+    if (k >= 500) this.unlockAchievement('kill_500');
+    if (k >= 1000) this.unlockAchievement('kill_1000');
+    // Streak
+    const st = this.state.killStreak;
+    if (st >= 5) this.unlockAchievement('streak_5');
+    if (st >= 10) this.unlockAchievement('streak_10');
+    if (st >= 15) this.unlockAchievement('streak_15');
+    if (st >= 25) this.unlockAchievement('streak_25');
+    // Vehicle
+    const vk = this.state.vehicleKills;
+    if (vk >= 10) this.unlockAchievement('vehicle_10');
+    if (vk >= 25) this.unlockAchievement('vehicle_25');
+  }
+
+  private checkWaveAchievements() {
+    const w = this.state.wave;
+    if (w >= 10) this.unlockAchievement('wave_10');
+    if (w >= 25) this.unlockAchievement('wave_25');
+    if (w >= 50) this.unlockAchievement('wave_50');
+  }
+
+  private checkWeaponAchievements(type: string) {
+    const map: Record<string, string> = { spread: 'weapon_spread', rapid: 'weapon_rapid', flamethrower: 'weapon_flamethrower', beam: 'weapon_beam', laser: 'weapon_laser' };
+    if (map[type]) this.unlockAchievement(map[type]);
+  }
+
+  private checkMissionAchievements() {
+    const m = this.state.missionsCompleted;
+    if (m >= 3) this.unlockAchievement('mission_3');
+    if (m >= 10) this.unlockAchievement('mission_10');
+  }
+
+  private checkBossAchievement(bossType: string) {
+    if (bossType === 'boss') this.unlockAchievement('boss_mech');
+    if (bossType === 'artillery') this.unlockAchievement('boss_artillery');
+    if (bossType === 'attack_heli') this.unlockAchievement('boss_heli');
+  }
+
+  private checkScoreAchievements() {
+    const sc = this.state.score;
+    if (sc >= 10000) this.unlockAchievement('score_10k');
+    if (sc >= 50000) this.unlockAchievement('score_50k');
+  }
+
+  getAchievements(): Map<string, boolean> { return this.achievements; }
+  getAchievementDefs() { return GameSystem.ACHIEVEMENT_DEFS; }
+  popAchievementQueue(): string | undefined { return this.achievementQueue.shift(); }
 
   getState(): GameState {
     return this.state;

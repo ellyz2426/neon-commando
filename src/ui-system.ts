@@ -57,6 +57,10 @@ export class UISystem extends createSystem({
     required: [PanelUI, PanelDocument],
     where: [eq(PanelUI, 'config', './ui/tutorial.json')],
   },
+  achievementsPanel: {
+    required: [PanelUI, PanelDocument],
+    where: [eq(PanelUI, 'config', './ui/achievements.json')],
+  },
 }) {
   private gameSystem!: GameSystem;
   private audioSystem!: AudioSystem;
@@ -67,6 +71,7 @@ export class UISystem extends createSystem({
   private settingsEntity: Entity | null = null;
   private statsEntity: Entity | null = null;
   private tutorialEntity: Entity | null = null;
+  private achievementsEntity: Entity | null = null;
   private menuDoc: UIKitDocument | null = null;
   private hudDoc: UIKitDocument | null = null;
   private pauseDoc: UIKitDocument | null = null;
@@ -74,9 +79,11 @@ export class UISystem extends createSystem({
   private settingsDoc: UIKitDocument | null = null;
   private statsDoc: UIKitDocument | null = null;
   private tutorialDoc: UIKitDocument | null = null;
+  private achievementsDoc: UIKitDocument | null = null;
   private selectedMode = 0;
   private selectedDifficulty = 0;
   private lastPhase = '';
+  private achievementToastTimer = 0;
 
   init() {
     this.gameSystem = this.world.getSystem(GameSystem) as unknown as GameSystem;
@@ -129,6 +136,12 @@ export class UISystem extends createSystem({
     this.tutorialEntity = this.world.createTransformEntity();
     this.tutorialEntity.object3D!.position.set(0, 2, -3);
     this.tutorialEntity.addComponent(PanelUI, { config: './ui/tutorial.json' });
+
+    // Achievements panel — world space, right side
+    this.achievementsEntity = this.world.createTransformEntity();
+    this.achievementsEntity.object3D!.position.set(3.5, 3, -3.5);
+    this.achievementsEntity.object3D!.rotation.y = -0.35;
+    this.achievementsEntity.addComponent(PanelUI, { config: './ui/achievements.json' });
 
   }
 
@@ -189,6 +202,14 @@ export class UISystem extends createSystem({
       tutBtn?.addEventListener('click', () => {
         this.audioSystem.playMenuSelect();
         this.togglePanel(this.tutorialEntity, true);
+      });
+
+      // Achievements button (reuse stats btn or add separate)
+      const achBtn = doc.getElementById('btn-achievements') as UIKit.Text | undefined;
+      achBtn?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        this.updateAchievementsPanel();
+        this.togglePanel(this.achievementsEntity, true);
       });
 
       this.updateMenuHighlights();
@@ -289,6 +310,19 @@ export class UISystem extends createSystem({
         this.togglePanel(this.tutorialEntity, false);
       });
     });
+
+    // Achievements panel qualify
+    this.queries.achievementsPanel.subscribe('qualify', (entity) => {
+      const doc = getDoc(entity);
+      if (!doc) return;
+      this.achievementsDoc = doc;
+
+      const closeBtn = doc.getElementById('btn-close-achievements') as UIKit.Text | undefined;
+      closeBtn?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        this.togglePanel(this.achievementsEntity, false);
+      });
+    });
   }
 
   private togglePanel(entity: Entity | null, show: boolean) {
@@ -324,6 +358,19 @@ export class UISystem extends createSystem({
     setText(this.statsDoc, 'stat-highscore', `High Score: ${s.highScore}`);
   }
 
+  private updateAchievementsPanel() {
+    if (!this.achievementsDoc) return;
+    const achMap = this.gameSystem.getAchievements();
+    const defs = this.gameSystem.getAchievementDefs();
+    let unlocked = 0;
+    for (let i = 0; i < defs.length; i++) {
+      const has = achMap.has(defs[i].id);
+      if (has) unlocked++;
+      setText(this.achievementsDoc, `ach-${i}`, has ? defs[i].label : defs[i].label.replace('🏆', '🔒'));
+    }
+    setText(this.achievementsDoc, 'ach-count', `${unlocked} / ${defs.length} Unlocked`);
+  }
+
   update(delta: number) {
     const s = this.gameSystem.getState();
 
@@ -335,7 +382,7 @@ export class UISystem extends createSystem({
 
     // Update HUD
     if (s.phase === 'playing' && this.hudDoc) {
-      this.updateHUD(s);
+      this.updateHUD(s, delta);
     }
 
     // Update results
@@ -375,10 +422,11 @@ export class UISystem extends createSystem({
       this.togglePanel(this.settingsEntity, false);
       this.togglePanel(this.statsEntity, false);
       this.togglePanel(this.tutorialEntity, false);
+      this.togglePanel(this.achievementsEntity, false);
     }
   }
 
-  private updateHUD(s: GameState) {
+  private updateHUD(s: GameState, delta: number) {
     if (!this.hudDoc) return;
     setText(this.hudDoc, 'hud-score', `Score: ${s.score}`);
     setText(this.hudDoc, 'hud-lives', `Lives: ${s.lives}`);
@@ -450,6 +498,23 @@ export class UISystem extends createSystem({
 
     // Companion status
     setText(this.hudDoc, 'hud-companion', s.companionAlive ? 'ALLY: ACTIVE' : 'ALLY: DOWN');
+
+    // Achievement toast — show latest unlock briefly
+    const achPop = this.gameSystem.popAchievementQueue();
+    if (achPop) {
+      const defs = this.gameSystem.getAchievementDefs();
+      const def = defs.find(d => d.id === achPop);
+      if (def) {
+        setText(this.hudDoc, 'hud-achievement', def.label);
+        this.achievementToastTimer = 3;
+      }
+    }
+    if (this.achievementToastTimer > 0) {
+      this.achievementToastTimer -= delta;
+      if (this.achievementToastTimer <= 0) {
+        setText(this.hudDoc, 'hud-achievement', '');
+      }
+    }
   }
 
   private updateResults(s: GameState) {
