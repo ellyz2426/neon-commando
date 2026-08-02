@@ -43,6 +43,11 @@
     <div class="control-row">WASD / Arrows: Move</div>
     <div class="control-row">Space / K: Shoot</div>
     <div class="control-row">E / J: Throw Grenade</div>
+    <div class="control-row">G: Smoke Grenade</div>
+    <div class="control-row">H: Deploy Decoy</div>
+    <div class="control-row">F: Mount/Dismount Turret</div>
+    <div class="control-row">Tab: Cycle Weapon</div>
+    <div class="control-row">Shift: Dodge Roll</div>
     <div class="control-row">Numpad: Aim Direction</div>
     <div class="control-row">Esc / P: Pause</div>
     <div class="section">-- VR CONTROLLERS --</div>
@@ -53,8 +58,10 @@
     <div class="control-row">Left Trigger: Grenade</div>
     <div class="control-row">B Button: Pause</div>
     <div class="section">-- TIPS --</div>
-    <div class="control-row">Destroy barrels for explosions</div>
-    <div class="control-row">Shoot crates for power-ups</div>
+    <div class="control-row">Walk into jeeps to commandeer</div>
+    <div class="control-row">F near turrets to mount them</div>
+    <div class="control-row">Decoys draw enemy fire</div>
+    <div class="control-row">Kill officers to remove enemy buffs</div>
     <div class="control-row">Chain kills for combo multiplier</div>
     <div id="btn-close-tutorial" class="close-btn">Close</div>
   </div>

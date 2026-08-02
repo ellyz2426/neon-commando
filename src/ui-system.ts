@@ -714,6 +714,22 @@ export class UISystem extends createSystem({
     } else {
       setText(this.hudDoc, 'hud-multikill', '');
     }
+
+    // Turret status
+    if (s.inTurret) {
+      setText(this.hudDoc, 'hud-turret', `🔫 TURRET [${s.turretHp} HP] — F: Dismount`);
+    } else {
+      setText(this.hudDoc, 'hud-turret', '');
+    }
+
+    // Decoy status
+    if (s.decoyActive) {
+      setText(this.hudDoc, 'hud-decoy', '👻 DECOY ACTIVE');
+    } else if (s.decoyCooldown > 0) {
+      setText(this.hudDoc, 'hud-decoy', `Decoy: ${Math.ceil(s.decoyCooldown)}s`);
+    } else {
+      setText(this.hudDoc, 'hud-decoy', 'H: Deploy Decoy');
+    }
   }
 
   private updateResults(s: GameState) {

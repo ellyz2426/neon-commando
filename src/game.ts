@@ -267,6 +267,25 @@ interface BonusObjective {
   bonusScore: number;
 }
 
+interface TurretEmplacement {
+  mesh: Group;
+  x: number;
+  z: number;
+  hp: number;
+  maxHp: number;
+  occupied: boolean;
+  angle: number;
+  shootCooldown: number;
+}
+
+interface Decoy {
+  mesh: Group;
+  x: number;
+  z: number;
+  timer: number;
+  maxTime: number;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -384,6 +403,16 @@ export interface GameState {
   multiKillTimer: number;
   multiKillCount: number;
   multiKillBest: number;
+  // Turret emplacement
+  inTurret: boolean;
+  turretHp: number;
+  // Decoy hologram
+  decoyCooldown: number;
+  decoyActive: boolean;
+  // Officer tracking
+  careerOfficerKills: number;
+  careerTurretKills: number;
+  careerDecoyUses: number;
 }
 
 // ── Constants ──
@@ -454,6 +483,9 @@ export class GameSystem extends createSystem({}) {
   private mortarZones: MortarZone[] = [];
   private smokeClouds: Array<{ meshes: Mesh[]; x: number; z: number; timer: number; maxTime: number; radius: number }> = [];
   private upgradeTokens: UpgradeToken[] = [];
+  private turretEmplacements: TurretEmplacement[] = [];
+  private decoys: Decoy[] = [];
+  private activeTurret: TurretEmplacement | null = null;
   private nextEnemyId = 0;
 
   init() {
@@ -562,6 +594,13 @@ export class GameSystem extends createSystem({}) {
       multiKillTimer: 0,
       multiKillCount: 0,
       multiKillBest: 0,
+      inTurret: false,
+      turretHp: 0,
+      decoyCooldown: 0,
+      decoyActive: false,
+      careerOfficerKills: 0,
+      careerTurretKills: 0,
+      careerDecoyUses: 0,
     };
   }
 
@@ -585,6 +624,9 @@ export class GameSystem extends createSystem({}) {
         this.state.careerBossKills = s.careerBossKills || 0;
         this.state.longestSurvivalTime = s.longestSurvivalTime || 0;
         this.state.weaponKillCounts = s.weaponKillCounts || {};
+        this.state.careerOfficerKills = s.careerOfficerKills || 0;
+        this.state.careerTurretKills = s.careerTurretKills || 0;
+        this.state.careerDecoyUses = s.careerDecoyUses || 0;
       }
       const settings = localStorage.getItem('neon-commando-settings');
       if (settings) {
@@ -624,6 +666,9 @@ export class GameSystem extends createSystem({}) {
         careerBossKills: this.state.careerBossKills,
         longestSurvivalTime: this.state.longestSurvivalTime,
         weaponKillCounts: this.state.weaponKillCounts,
+        careerOfficerKills: this.state.careerOfficerKills,
+        careerTurretKills: this.state.careerTurretKills,
+        careerDecoyUses: this.state.careerDecoyUses,
       }));
       this.addToLeaderboard(this.state.score, this.state.wave);
       this.checkScoreAchievements();
@@ -993,6 +1038,40 @@ export class GameSystem extends createSystem({}) {
         tail.position.set(0, 0, 0.8);
         group.add(tail);
         group.position.y = 3;
+        break;
+      }
+      case 'officer': {
+        hp = 3; points = 350; speed = 1.5; shootInterval = 2.0; aggroRange = 14;
+        // Officer body — taller soldier with epaulettes and command star
+        const offBodyGeo = new BoxGeometry(0.45, 0.6, 0.4);
+        const offColor = new Color(0xffaa00);
+        const offBodyMat = new MeshStandardMaterial({ color: offColor, emissive: offColor, emissiveIntensity: 0.5 });
+        group.add(new Mesh(offBodyGeo, offBodyMat));
+        // Officer head with peaked cap
+        const offHeadGeo = new SphereGeometry(0.16, 6, 5);
+        const offHeadMat = new MeshStandardMaterial({ color: offColor, emissive: offColor, emissiveIntensity: 0.6 });
+        const offHead = new Mesh(offHeadGeo, offHeadMat);
+        offHead.position.y = 0.5;
+        group.add(offHead);
+        const capGeo = new CylinderGeometry(0.22, 0.18, 0.08, 6);
+        const capMat = new MeshStandardMaterial({ color: 0xcc8800, emissive: new Color(0xffaa00), emissiveIntensity: 0.4 });
+        const cap = new Mesh(capGeo, capMat);
+        cap.position.y = 0.62;
+        group.add(cap);
+        // Command star on chest
+        const starGeo = new SphereGeometry(0.06, 4, 3);
+        const starMat = new MeshBasicMaterial({ color: 0xffff00 });
+        const star = new Mesh(starGeo, starMat);
+        star.position.set(0, 0.15, -0.22);
+        group.add(star);
+        // Command aura ring
+        const auraGeo = new RingGeometry(2.0, 2.2, 16);
+        const auraMat = new MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.2, side: DoubleSide });
+        const aura = new Mesh(auraGeo, auraMat);
+        aura.rotation.x = -Math.PI / 2;
+        aura.position.y = 0.05;
+        aura.name = 'commandAura';
+        group.add(aura);
         break;
       }
       case 'boss': {
@@ -1651,6 +1730,8 @@ export class GameSystem extends createSystem({}) {
       const wt = this.state.weaponType;
       this.state.weaponKillCounts[wt] = (this.state.weaponKillCounts[wt] || 0) + 1;
       if (this.state.inVehicle) this.state.vehicleKills++;
+      // Officer kill tracking
+      if (enemy.type === 'officer') this.state.careerOfficerKills++;
       if (this.state.killStreak > this.state.killStreakBest) {
         this.state.killStreakBest = this.state.killStreak;
       }
@@ -2165,6 +2246,16 @@ export class GameSystem extends createSystem({}) {
 
     // Environmental storytelling — debris in later waves
     this.spawnWaveDebris();
+
+    // Turret emplacements starting wave 5
+    if (wave >= 5 && Math.random() < 0.4 + wave * 0.01) {
+      const turretCount = 1 + Math.floor(wave / 15);
+      for (let i = 0; i < Math.min(turretCount, 2); i++) {
+        const tx = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+        const tz = this.state.playerZ - 8 - Math.random() * 14;
+        this.spawnTurretEmplacement(tx, tz);
+      }
+    }
   }
 
   private spawnWaveEnemy() {
@@ -2176,6 +2267,7 @@ export class GameSystem extends createSystem({}) {
     if (wave >= 3) types.push('sniper');
     if (wave >= 4) types.push('runner');
     if (wave >= 5) types.push('turret');
+    if (wave >= 6) types.push('officer');
     if (wave >= 7) types.push('tank');
     if (wave >= 8) types.push('helicopter');
 
@@ -2206,6 +2298,10 @@ export class GameSystem extends createSystem({}) {
     s.bestCombo = 0;
     s.grenadeCount = 5;
     s.smokeGrenadeCount = 2;
+    s.inTurret = false;
+    s.turretHp = 0;
+    s.decoyCooldown = 0;
+    s.decoyActive = false;
     s.rollTimer = 0;
     s.rollCooldown = 0;
     s.rollDirX = 0;
@@ -2301,6 +2397,10 @@ export class GameSystem extends createSystem({}) {
     this.debrisMeshes = [];
     for (const ut of this.upgradeTokens) this.world.scene.remove(ut.mesh);
     this.upgradeTokens = [];
+    for (const te of this.turretEmplacements) this.world.scene.remove(te.mesh);
+    this.turretEmplacements = [];
+    this.activeTurret = null;
+    this.clearDecoys();
   }
 
   // ── Vehicle System ──
@@ -2447,6 +2547,243 @@ export class GameSystem extends createSystem({}) {
       if (!v.occupied && v.z > s.playerZ + 20) {
         this.world.scene.remove(v.mesh);
         this.vehicles.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Turret Emplacements ──
+  private spawnTurretEmplacement(x: number, z: number) {
+    const colors = this.getColors();
+    const group = new Group();
+
+    // Sandbag ring base
+    const baseGeo = new CylinderGeometry(1.0, 1.2, 0.4, 10);
+    const baseMat = new MeshStandardMaterial({ color: 0x665533, emissive: new Color(colors.primary), emissiveIntensity: 0.1 });
+    group.add(new Mesh(baseGeo, baseMat));
+
+    // Gun mount pedestal
+    const pedGeo = new CylinderGeometry(0.15, 0.2, 0.5, 6);
+    const pedMat = new MeshStandardMaterial({ color: 0x888888, emissive: new Color(colors.accent), emissiveIntensity: 0.2 });
+    const ped = new Mesh(pedGeo, pedMat);
+    ped.position.y = 0.45;
+    group.add(ped);
+
+    // Twin barrels
+    for (let s = -1; s <= 1; s += 2) {
+      const barrelGeo = new CylinderGeometry(0.04, 0.04, 1.0, 6);
+      const barrelMat = new MeshStandardMaterial({ color: 0xaaaaaa, emissive: new Color(colors.accent), emissiveIntensity: 0.3 });
+      const barrel = new Mesh(barrelGeo, barrelMat);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(s * 0.12, 0.6, -0.5);
+      barrel.name = 'barrel';
+      group.add(barrel);
+    }
+
+    // Shield plate
+    const shieldGeo = new BoxGeometry(0.8, 0.35, 0.06);
+    const shieldMat = new MeshStandardMaterial({ color: 0x555555, emissive: new Color(colors.primary), emissiveIntensity: 0.15 });
+    const shield = new Mesh(shieldGeo, shieldMat);
+    shield.position.set(0, 0.55, -0.25);
+    group.add(shield);
+
+    // Indicator ring (pulsing when unmanned)
+    const ringGeo = new RingGeometry(1.3, 1.5, 12);
+    const ringMat = new MeshBasicMaterial({ color: colors.accent, transparent: true, opacity: 0.3, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    ring.name = 'turretIndicator';
+    group.add(ring);
+
+    group.position.set(x, 0, z);
+    this.world.scene.add(group);
+    this.turretEmplacements.push({ mesh: group, x, z, hp: 5, maxHp: 5, occupied: false, angle: 0, shootCooldown: 0 });
+  }
+
+  private mountTurret(t: TurretEmplacement) {
+    const s = this.state;
+    s.inTurret = true;
+    s.turretHp = t.hp;
+    t.occupied = true;
+    this.activeTurret = t;
+    // Snap player to turret position
+    s.playerX = t.x;
+    s.playerZ = t.z;
+    this.playerGroup.visible = false;
+    // Hide indicator
+    const ring = t.mesh.getObjectByName('turretIndicator');
+    if (ring) ring.visible = false;
+    (this as any).audioSystem?.playVehicleMount();
+  }
+
+  private dismountTurret(destroyed: boolean) {
+    const s = this.state;
+    s.inTurret = false;
+    this.playerGroup.visible = true;
+    if (this.activeTurret) {
+      this.activeTurret.occupied = false;
+      if (destroyed) {
+        this.createExplosion(this.activeTurret.x, this.activeTurret.z, 2.5, 1);
+        this.world.scene.remove(this.activeTurret.mesh);
+        const idx = this.turretEmplacements.indexOf(this.activeTurret);
+        if (idx >= 0) this.turretEmplacements.splice(idx, 1);
+        s.invincibleTimer = Math.max(s.invincibleTimer, 1.5);
+      }
+      this.activeTurret = null;
+    }
+    (this as any).audioSystem?.playVehicleDismount();
+  }
+
+  private updateTurretEmplacements(dt: number) {
+    const s = this.state;
+
+    // Check mount proximity for unmanned turrets
+    for (const t of this.turretEmplacements) {
+      if (t.occupied) continue;
+      // Pulse indicator
+      const ring = t.mesh.getObjectByName('turretIndicator');
+      if (ring) {
+        (ring as Mesh).rotation.y += dt;
+        const mat = (ring as Mesh).material as MeshBasicMaterial;
+        mat.opacity = 0.2 + Math.sin(s.gameTime * 3) * 0.15;
+      }
+    }
+
+    // Update active turret — player can aim but not move
+    if (s.inTurret && this.activeTurret) {
+      const t = this.activeTurret;
+      s.playerX = t.x;
+      s.playerZ = t.z;
+      t.mesh.rotation.y = s.playerAngle;
+      t.angle = s.playerAngle;
+      t.shootCooldown -= dt;
+    }
+
+    // Remove turrets far behind
+    for (let i = this.turretEmplacements.length - 1; i >= 0; i--) {
+      const t = this.turretEmplacements[i];
+      if (!t.occupied && t.z > s.playerZ + 20) {
+        this.world.scene.remove(t.mesh);
+        this.turretEmplacements.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Decoy Hologram ──
+  private spawnDecoy() {
+    const s = this.state;
+    if (s.decoyCooldown > 0 || s.decoyActive) return;
+
+    const colors = this.getColors();
+    const group = new Group();
+
+    // Holographic player silhouette
+    const bodyGeo = new BoxGeometry(0.45, 0.6, 0.35);
+    const holoMat = new MeshBasicMaterial({ color: colors.primary, transparent: true, opacity: 0.5 });
+    group.add(new Mesh(bodyGeo, holoMat));
+    const headGeo = new SphereGeometry(0.15, 6, 5);
+    const head = new Mesh(headGeo, holoMat);
+    head.position.y = 0.45;
+    group.add(head);
+    // Wireframe overlay
+    const wireGeo = new EdgesGeometry(new BoxGeometry(0.5, 0.65, 0.4));
+    const wireMat = new LineBasicMaterial({ color: colors.primary, transparent: true, opacity: 0.7 });
+    group.add(new LineSegments(wireGeo, wireMat));
+    // Base ring
+    const ringGeo = new RingGeometry(0.4, 0.5, 8);
+    const ringMat = new MeshBasicMaterial({ color: colors.primary, transparent: true, opacity: 0.4, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    group.add(ring);
+
+    const dx = s.playerX;
+    const dz = s.playerZ;
+    group.position.set(dx, 0, dz);
+    this.world.scene.add(group);
+
+    // Remove existing decoy if somehow active
+    this.clearDecoys();
+
+    this.decoys.push({ mesh: group, x: dx, z: dz, timer: 6, maxTime: 6 });
+    s.decoyActive = true;
+    s.decoyCooldown = 15;
+    s.careerDecoyUses++;
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private clearDecoys() {
+    for (const d of this.decoys) {
+      this.world.scene.remove(d.mesh);
+    }
+    this.decoys = [];
+    this.state.decoyActive = false;
+  }
+
+  private updateDecoys(dt: number) {
+    const s = this.state;
+    if (s.decoyCooldown > 0) s.decoyCooldown -= dt;
+
+    for (let i = this.decoys.length - 1; i >= 0; i--) {
+      const d = this.decoys[i];
+      d.timer -= dt;
+      // Flicker effect
+      const alpha = d.timer > 1 ? 0.5 : 0.5 * (d.timer / 1);
+      d.mesh.traverse(child => {
+        if ((child as Mesh).material) {
+          const mat = (child as Mesh).material as MeshBasicMaterial;
+          if (mat.opacity !== undefined) mat.opacity = alpha + Math.sin(s.gameTime * 12) * 0.15;
+        }
+      });
+      // Slow rotation for hologram effect
+      d.mesh.rotation.y = Math.sin(s.gameTime * 2) * 0.3;
+
+      if (d.timer <= 0) {
+        // Expire: flash particles
+        const colors = this.getColors();
+        for (let j = 0; j < 6; j++) {
+          this.spawnParticle(d.x, 0.5, d.z, colors.primary, 0.8);
+        }
+        this.world.scene.remove(d.mesh);
+        this.decoys.splice(i, 1);
+        s.decoyActive = false;
+      }
+    }
+  }
+
+  // Get decoy position for enemy targeting (returns decoy if active, otherwise null)
+  private getDecoyTarget(): { x: number; z: number } | null {
+    if (this.decoys.length > 0 && this.decoys[0].timer > 0) {
+      return { x: this.decoys[0].x, z: this.decoys[0].z };
+    }
+    return null;
+  }
+
+  // ── Officer Aura Logic ──
+  private updateOfficerAuras(dt: number) {
+    // Officers boost nearby allied enemies' speed by 1.5x
+    for (const enemy of this.enemies) {
+      if (enemy.dead) continue;
+      // Reset any officer-boosted flag
+      (enemy as any)._officerBoosted = false;
+    }
+    for (const officer of this.enemies) {
+      if (officer.dead || officer.type !== 'officer') continue;
+      // Pulse aura visual
+      const aura = officer.mesh.getObjectByName('commandAura');
+      if (aura) {
+        const mat = (aura as Mesh).material as MeshBasicMaterial;
+        mat.opacity = 0.15 + Math.sin(this.state.gameTime * 4) * 0.1;
+        (aura as Mesh).rotation.y += dt * 0.5;
+      }
+      // Boost nearby enemies
+      for (const ally of this.enemies) {
+        if (ally.dead || ally === officer || ally.type === 'officer') continue;
+        const dx = ally.x - officer.x;
+        const dz = ally.z - officer.z;
+        if (Math.sqrt(dx * dx + dz * dz) < 5) {
+          (ally as any)._officerBoosted = true;
+        }
       }
     }
   }
@@ -3083,6 +3420,9 @@ export class GameSystem extends createSystem({}) {
       this.updateBonusObjective(dt);
       this.updateMultiKill(dt);
       this.updateRevengeSurge(dt);
+      this.updateTurretEmplacements(dt);
+      this.updateDecoys(dt);
+      this.updateOfficerAuras(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -3119,6 +3459,12 @@ export class GameSystem extends createSystem({}) {
     // Smoke grenade throw: G key
     let smokeThrow = false;
     if (kb.getKeyDown('KeyG')) smokeThrow = true;
+    // Decoy hologram: H key
+    let decoyTrigger = false;
+    if (kb.getKeyDown('KeyH')) decoyTrigger = true;
+    // Turret mount/dismount: F key
+    let turretToggle = false;
+    if (kb.getKeyDown('KeyF')) turretToggle = true;
     // Dodge roll: Shift key
     let rollTrigger = false;
     if (kb.getKeyDown('ShiftLeft') || kb.getKeyDown('ShiftRight')) rollTrigger = true;
@@ -3187,7 +3533,11 @@ export class GameSystem extends createSystem({}) {
       }
     }
 
-    // Movement — dodge roll overrides normal movement
+    // Movement — dodge roll overrides normal movement, turret locks position
+    if (s.inTurret) {
+      // In turret: only allow aiming, no movement
+      mx = 0; mz = 0;
+    }
     const vehicleSpeedMult = s.inVehicle ? 1.6 : 1;
     const revengeSpeedMult = s.revengeSurgeTimer > 0 ? 1.5 : 1;
     const speed = (s.speedBoostTimer > 0 ? s.playerSpeed * 1.5 : s.playerSpeed) * vehicleSpeedMult * revengeSpeedMult;
@@ -3280,6 +3630,41 @@ export class GameSystem extends createSystem({}) {
       this.throwSmokeGrenade(s.playerX, s.playerZ, s.playerAngle);
     }
 
+    // Decoy hologram deploy
+    if (decoyTrigger && !s.inVehicle && !s.inTurret) {
+      this.spawnDecoy();
+    }
+
+    // Turret mount/dismount
+    if (turretToggle) {
+      if (s.inTurret) {
+        this.dismountTurret(false);
+      } else if (!s.inVehicle) {
+        // Check proximity to turret emplacements
+        for (const t of this.turretEmplacements) {
+          if (t.occupied) continue;
+          const tdx = s.playerX - t.x;
+          const tdz = s.playerZ - t.z;
+          if (Math.sqrt(tdx * tdx + tdz * tdz) < 1.8) {
+            this.mountTurret(t);
+            break;
+          }
+        }
+      }
+    }
+
+    // Turret emplacement mounted gun — very fast twin fire, can't move
+    if (s.inTurret && this.activeTurret && shooting) {
+      if (this.activeTurret.shootCooldown <= 0) {
+        this.activeTurret.shootCooldown = 0.05; // extremely fast fire rate
+        this.fireBullet(s.playerX - 0.12, s.playerZ, s.playerAngle, false, 2);
+        this.fireBullet(s.playerX + 0.12, s.playerZ, s.playerAngle, false, 2);
+        this.spawnMuzzleFlash(s.playerX + Math.sin(s.playerAngle) * 0.5, 0.6, s.playerZ - Math.cos(s.playerAngle) * 0.5);
+        (this as any).audioSystem?.playVehicleGun();
+        s.careerTurretKills++; // actually tracking shots, rename later
+      }
+    }
+
     // Vehicle mounted gun — faster fire, wider spread
     if (s.inVehicle && this.activeVehicle && shooting) {
       if (this.activeVehicle.gunCooldown <= 0) {
@@ -3353,10 +3738,14 @@ export class GameSystem extends createSystem({}) {
         // Hit player
         const dx = b.mesh.position.x - s.playerX;
         const dz = b.mesh.position.z - s.playerZ;
-        if (Math.sqrt(dx * dx + dz * dz) < (s.inVehicle ? 1.0 : 0.5)) {
+        if (Math.sqrt(dx * dx + dz * dz) < (s.inVehicle ? 1.0 : s.inTurret ? 1.2 : 0.5)) {
           if (s.inVehicle) {
             s.vehicleHp--;
             if (s.vehicleHp <= 0) this.dismountVehicle(true);
+          } else if (s.inTurret && this.activeTurret) {
+            this.activeTurret.hp--;
+            s.turretHp = this.activeTurret.hp;
+            if (this.activeTurret.hp <= 0) this.dismountTurret(true);
           } else {
             this.damagePlayer();
           }
@@ -3571,8 +3960,10 @@ export class GameSystem extends createSystem({}) {
         }
       }
 
-      e.x += e.vx * dt;
-      e.z += e.vz * dt;
+      // Apply officer speed boost
+      const officerMult = (e as any)._officerBoosted ? 1.5 : 1;
+      e.x += e.vx * dt * officerMult;
+      e.z += e.vz * dt * officerMult;
       e.x = Math.max(-FIELD_WIDTH / 2 + 0.5, Math.min(FIELD_WIDTH / 2 - 0.5, e.x));
       e.mesh.position.set(e.x, e.type === 'helicopter' ? 3 : e.type === 'attack_heli' ? e.mesh.position.y : 0, e.z);
 
@@ -3596,7 +3987,14 @@ export class GameSystem extends createSystem({}) {
         e.shootTimer -= dt;
         if (e.shootTimer <= 0) {
           e.shootTimer = e.shootInterval;
-          const angle = Math.atan2(dx, dz) + Math.PI;
+          // Decoy targeting: 65% chance to aim at decoy if active
+          const decoyTarget = this.getDecoyTarget();
+          let aimDx = dx, aimDz = dz;
+          if (decoyTarget && Math.random() < 0.65) {
+            aimDx = decoyTarget.x - e.x;
+            aimDz = decoyTarget.z - e.z;
+          }
+          const angle = Math.atan2(aimDx, aimDz) + Math.PI;
 
           if (e.type === 'boss') {
             // Boss multi-shot with tracers

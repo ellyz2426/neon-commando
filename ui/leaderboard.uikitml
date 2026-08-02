@@ -1,0 +1,55 @@
+<panel>
+<style>
+  .root {
+    flex-direction: column;
+    align-items: center;
+    padding: 16;
+    gap: 6;
+    background-color: rgba(10, 26, 10, 0.95);
+    border-radius: 16;
+    border-color: #ffaa00;
+    border-width: 2;
+  }
+  .title {
+    font-size: 22;
+    color: #ffaa00;
+  }
+  .section-label {
+    font-size: 13;
+    color: #66aa88;
+    margin-top: 6;
+  }
+  .lb-row {
+    font-size: 12;
+    color: #00ff88;
+  }
+  .close-btn {
+    font-size: 14;
+    color: #ff4444;
+    background-color: rgba(255, 68, 68, 0.1);
+    padding: 6;
+    border-radius: 6;
+    border-color: #ff4444;
+    border-width: 1;
+    margin-top: 10;
+    min-width: 80;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+<div class="root" id="root">
+  <div class="title" id="lb-title">LEADERBOARD</div>
+  <div class="section-label">-- TOP 10 SCORES --</div>
+  <div class="lb-row" id="lb-1">#1 ---</div>
+  <div class="lb-row" id="lb-2">#2 ---</div>
+  <div class="lb-row" id="lb-3">#3 ---</div>
+  <div class="lb-row" id="lb-4">#4 ---</div>
+  <div class="lb-row" id="lb-5">#5 ---</div>
+  <div class="lb-row" id="lb-6">#6 ---</div>
+  <div class="lb-row" id="lb-7">#7 ---</div>
+  <div class="lb-row" id="lb-8">#8 ---</div>
+  <div class="lb-row" id="lb-9">#9 ---</div>
+  <div class="lb-row" id="lb-10">#10 ---</div>
+  <div class="close-btn" id="btn-close-leaderboard">Close</div>
+</div>
+</panel>
