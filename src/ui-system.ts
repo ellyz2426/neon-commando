@@ -468,10 +468,18 @@ export class UISystem extends createSystem({
       setText(this.hudDoc, 'hud-combo', '');
     }
 
-    // Weapon indicator
-    if (s.weaponType !== 'single') {
-      const wName = s.weaponType.toUpperCase();
-      setText(this.hudDoc, 'hud-weapon', `${wName} ${Math.ceil(s.weaponTimer)}s`);
+    // Weapon indicator — show name + ammo for homing, timer for timed weapons
+    const wNames: Record<string, string> = {
+      single: 'RIFLE', spread: 'SPREAD', rapid: 'RAPID', laser: 'LASER',
+      flamethrower: 'FLAME', beam: 'BEAM', homing: 'HOMING',
+    };
+    const wDisp = wNames[s.weaponType] || s.weaponType.toUpperCase();
+    if (s.weaponType === 'homing') {
+      setText(this.hudDoc, 'hud-weapon', `${wDisp} [${s.homingAmmo}]`);
+    } else if (s.weaponType !== 'single') {
+      setText(this.hudDoc, 'hud-weapon', `${wDisp} ${Math.ceil(s.weaponTimer)}s`);
+    } else if (s.weaponInventory.length > 1) {
+      setText(this.hudDoc, 'hud-weapon', `${wDisp} [Tab]`);
     } else {
       setText(this.hudDoc, 'hud-weapon', '');
     }

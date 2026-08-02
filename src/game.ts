@@ -48,6 +48,7 @@ interface Bullet {
 }
 
 interface Enemy {
+  id: number;
   mesh: Group;
   type: string;
   hp: number;
@@ -210,6 +211,46 @@ interface ScorePopup {
   life: number;
 }
 
+interface HomingMissile {
+  mesh: Group;
+  x: number;
+  z: number;
+  vx: number;
+  vz: number;
+  life: number;
+  targetId: number;
+}
+
+interface FuelDrum {
+  mesh: Group;
+  x: number;
+  z: number;
+  hp: number;
+}
+
+interface ElectricFence {
+  mesh: Group;
+  x: number;
+  z: number;
+  length: number;
+  angle: number;
+  electrifiedTimer: number;
+  onDuration: number;
+  offDuration: number;
+  isOn: boolean;
+  sparkMeshes: Mesh[];
+}
+
+interface MortarZone {
+  mesh: Group;
+  x: number;
+  z: number;
+  radius: number;
+  timer: number;
+  warningTime: number;
+  impactPending: boolean;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -223,7 +264,7 @@ export interface GameState {
   bestCombo: number;
   grenadeCount: number;
   maxGrenades: number;
-  weaponType: 'single' | 'spread' | 'rapid' | 'laser' | 'flamethrower' | 'beam';
+  weaponType: 'single' | 'spread' | 'rapid' | 'laser' | 'flamethrower' | 'beam' | 'homing';
   weaponTimer: number;
   shieldTimer: number;
   speedBoostTimer: number;
@@ -285,6 +326,13 @@ export interface GameState {
   // Wave announcement
   waveName: string;
   waveNameTimer: number;
+  // Weapon inventory for weapon cycling
+  weaponInventory: Array<{ type: string; ammo: number }>;
+  currentWeaponIdx: number;
+  // Homing missile ammo
+  homingAmmo: number;
+  // Music intensity level
+  musicIntensity: number;
 }
 
 // ── Constants ──
@@ -342,6 +390,11 @@ export class GameSystem extends createSystem({}) {
   private mines: Mine[] = [];
   private scorePopups: ScorePopup[] = [];
   private damageFlashMesh: Mesh | null = null;
+  private homingMissiles: HomingMissile[] = [];
+  private fuelDrums: FuelDrum[] = [];
+  private electricFences: ElectricFence[] = [];
+  private mortarZones: MortarZone[] = [];
+  private nextEnemyId = 0;
 
   init() {
     this.state = this.createDefaultState();
@@ -418,6 +471,10 @@ export class GameSystem extends createSystem({}) {
       damageFlashTimer: 0,
       waveName: '',
       waveNameTimer: 0,
+      weaponInventory: [{ type: 'single', ammo: -1 }],
+      currentWeaponIdx: 0,
+      homingAmmo: 0,
+      musicIntensity: 0,
     };
   }
 
@@ -918,6 +975,7 @@ export class GameSystem extends createSystem({}) {
     }
 
     return {
+      id: this.nextEnemyId++,
       mesh: group,
       type,
       hp,
@@ -1064,7 +1122,7 @@ export class GameSystem extends createSystem({}) {
   // ── Power-Up ──
   private spawnPowerUp(x: number, z: number) {
     const colors = this.getColors();
-    const types = ['spread', 'rapid', 'shield', 'speed', 'grenade', 'life', 'score', 'flamethrower', 'beam'];
+    const types = ['spread', 'rapid', 'shield', 'speed', 'grenade', 'life', 'score', 'flamethrower', 'beam', 'homing'];
     const type = types[Math.floor(Math.random() * types.length)];
 
     const group = new Group();
@@ -1082,6 +1140,7 @@ export class GameSystem extends createSystem({}) {
       case 'score': pColor = '#ffff00'; break;
       case 'flamethrower': pColor = '#ff6600'; break;
       case 'beam': pColor = '#00ffff'; break;
+      case 'homing': pColor = '#ff00ff'; break;
     }
     const baseMat = new MeshBasicMaterial({ color: pColor, transparent: true, opacity: 0.7 });
     group.add(new Mesh(baseGeo, baseMat));
@@ -1240,6 +1299,9 @@ export class GameSystem extends createSystem({}) {
     this.state.invincibleTimer = 2;
     this.state.weaponType = 'single';
     this.state.weaponTimer = 0;
+    this.state.weaponInventory = [{ type: 'single', ammo: -1 }];
+    this.state.currentWeaponIdx = 0;
+    this.state.homingAmmo = 0;
     this.state.combo = 0;
     this.state.comboTimer = 0;
     this.state.killStreak = 0;
@@ -1298,6 +1360,12 @@ export class GameSystem extends createSystem({}) {
       case 'beam':
         this.state.weaponType = 'beam';
         this.state.weaponTimer = 12;
+        break;
+      case 'homing':
+        this.state.homingAmmo += 8;
+        this.addWeaponToInventory('homing', this.state.homingAmmo);
+        this.state.weaponType = 'homing';
+        this.state.weaponTimer = 0; // ammo-based, no timer
         break;
     }
     this.checkWeaponAchievements(type);
@@ -1604,6 +1672,36 @@ export class GameSystem extends createSystem({}) {
         const mx = (Math.random() - 0.5) * (FIELD_WIDTH - 2);
         const mz = this.state.playerZ - 8 - Math.random() * 18;
         this.spawnMine(mx, mz);
+      }
+    }
+
+    // Spawn fuel drums starting wave 3
+    if (wave >= 3) {
+      const drumCount = 1 + Math.floor(wave * 0.2);
+      for (let i = 0; i < Math.min(drumCount, 4); i++) {
+        const fx = (Math.random() - 0.5) * (FIELD_WIDTH - 3);
+        const fz = this.state.playerZ - 8 - Math.random() * 18;
+        this.spawnFuelDrum(fx, fz);
+      }
+    }
+
+    // Spawn electric fences starting wave 6
+    if (wave >= 6 && Math.random() < 0.5 + wave * 0.02) {
+      const fenceCount = 1 + Math.floor(wave / 10);
+      for (let i = 0; i < Math.min(fenceCount, 3); i++) {
+        const ex = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+        const ez = this.state.playerZ - 10 - Math.random() * 15;
+        this.spawnElectricFence(ex, ez);
+      }
+    }
+
+    // Spawn mortar zones starting wave 8
+    if (wave >= 8 && Math.random() < 0.4 + wave * 0.02) {
+      const mortarCount = 1 + Math.floor(wave / 12);
+      for (let i = 0; i < Math.min(mortarCount, 3); i++) {
+        const mx = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+        const mz = this.state.playerZ - 8 - Math.random() * 16;
+        this.spawnMortarZone(mx, mz);
       }
     }
 
@@ -2496,6 +2594,11 @@ export class GameSystem extends createSystem({}) {
       this.updateMines(dt);
       this.updateScorePopups(dt);
       this.updateDamageFlash(dt);
+      this.updateHomingMissiles(dt);
+      this.updateFuelDrums(dt);
+      this.updateElectricFences(dt);
+      this.updateMortarZones(dt);
+      this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
       this.updateScreenShake(dt);
@@ -2532,6 +2635,10 @@ export class GameSystem extends createSystem({}) {
       s.phase = 'paused';
       return;
     }
+    // Weapon cycle: Tab or left bumper
+    if (kb.getKeyDown('Tab')) {
+      this.cycleWeapon();
+    }
 
     // Aim with IJKL or aim toward movement direction
     if (kb.getKeyPressed('Numpad8')) aimZ = -1;
@@ -2567,6 +2674,7 @@ export class GameSystem extends createSystem({}) {
     }
     if (leftGP) {
       if (leftGP.getButtonDown(InputComponent.Trigger)) grenadeThrow = true;
+      if (leftGP.getButtonDown(InputComponent.X_Button)) this.cycleWeapon();
     }
 
     // Movement
@@ -2605,6 +2713,17 @@ export class GameSystem extends createSystem({}) {
         this.fireFlamethrower(dt);
       } else if (s.weaponType === 'beam') {
         this.fireBeam(dt);
+      } else if (s.weaponType === 'homing') {
+        if (s.shootCooldown <= 0 && s.homingAmmo > 0) {
+          s.shootCooldown = 0.4;
+          s.homingAmmo--;
+          this.fireHomingMissile();
+          (this as any).audioSystem?.playShoot();
+          // If out of ammo, remove from inventory and cycle
+          if (s.homingAmmo <= 0) {
+            this.removeWeaponFromInventory('homing');
+          }
+        }
       } else if (s.shootCooldown <= 0) {
         const cooldown = s.weaponType === 'rapid' ? RAPID_COOLDOWN : SHOOT_COOLDOWN;
         s.shootCooldown = cooldown;
@@ -3172,7 +3291,7 @@ export class GameSystem extends createSystem({}) {
         const dz = s.playerZ - crate.z;
         if (Math.sqrt(dx * dx + dz * dz) < 1.2) {
           // Give rare weapon
-          const rareWeapons = ['flamethrower', 'beam', 'spread'];
+          const rareWeapons = ['flamethrower', 'beam', 'spread', 'homing'];
           const weapon = rareWeapons[Math.floor(Math.random() * rareWeapons.length)];
           this.applyPowerUp(weapon);
           // Bonus grenades
@@ -3401,6 +3520,410 @@ export class GameSystem extends createSystem({}) {
     const sc = this.state.score;
     if (sc >= 10000) this.unlockAchievement('score_10k');
     if (sc >= 50000) this.unlockAchievement('score_50k');
+  }
+
+  // ── Weapon Inventory & Cycling ──
+  private addWeaponToInventory(type: string, ammo: number) {
+    const inv = this.state.weaponInventory;
+    const existing = inv.find(w => w.type === type);
+    if (existing) {
+      existing.ammo = ammo;
+    } else {
+      inv.push({ type, ammo });
+      this.state.currentWeaponIdx = inv.length - 1;
+    }
+  }
+
+  private removeWeaponFromInventory(type: string) {
+    const inv = this.state.weaponInventory;
+    const idx = inv.findIndex(w => w.type === type);
+    if (idx >= 0) {
+      inv.splice(idx, 1);
+      if (this.state.currentWeaponIdx >= inv.length) {
+        this.state.currentWeaponIdx = 0;
+      }
+      this.state.weaponType = (inv[this.state.currentWeaponIdx]?.type || 'single') as GameState['weaponType'];
+    }
+  }
+
+  private cycleWeapon() {
+    const inv = this.state.weaponInventory;
+    if (inv.length <= 1) return;
+    this.state.currentWeaponIdx = (this.state.currentWeaponIdx + 1) % inv.length;
+    const w = inv[this.state.currentWeaponIdx];
+    this.state.weaponType = w.type as GameState['weaponType'];
+    (this as any).audioSystem?.playMenuSelect();
+  }
+
+  // ── Homing Missile ──
+  private fireHomingMissile() {
+    const s = this.state;
+    // Find nearest alive enemy
+    let nearest: Enemy | null = null;
+    let nearDist = Infinity;
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const dx = e.x - s.playerX;
+      const dz = e.z - s.playerZ;
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d < nearDist) { nearDist = d; nearest = e; }
+    }
+    const group = new Group();
+    // Missile body
+    const bodyGeo = new ConeGeometry(0.1, 0.4, 6);
+    const bodyMat = new MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.9 });
+    const body = new Mesh(bodyGeo, bodyMat);
+    body.rotation.x = Math.PI / 2;
+    group.add(body);
+    // Exhaust glow
+    const exGeo = new SphereGeometry(0.08, 4, 4);
+    const exMat = new MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.7 });
+    const ex = new Mesh(exGeo, exMat);
+    ex.position.z = 0.25;
+    group.add(ex);
+
+    const angle = s.playerAngle;
+    const spd = 10;
+    group.position.set(s.playerX, 0.6, s.playerZ);
+    this.world.scene.add(group);
+    this.homingMissiles.push({
+      mesh: group,
+      x: s.playerX,
+      z: s.playerZ,
+      vx: Math.sin(angle) * spd,
+      vz: -Math.cos(angle) * spd,
+      life: 3,
+      targetId: nearest ? nearest.id : -1,
+    });
+    this.spawnMuzzleFlash(s.playerX + Math.sin(angle) * 0.4, 0.6, s.playerZ - Math.cos(angle) * 0.4);
+  }
+
+  private updateHomingMissiles(dt: number) {
+    for (let i = this.homingMissiles.length - 1; i >= 0; i--) {
+      const m = this.homingMissiles[i];
+      m.life -= dt;
+      if (m.life <= 0) {
+        this.world.scene.remove(m.mesh);
+        this.homingMissiles.splice(i, 1);
+        continue;
+      }
+      // Homing: steer toward target
+      const target = this.enemies.find(e => e.id === m.targetId && !e.dead);
+      if (target) {
+        const dx = target.x - m.x;
+        const dz = target.z - m.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > 0.1) {
+          const desiredVx = (dx / dist) * 12;
+          const desiredVz = (dz / dist) * 12;
+          m.vx += (desiredVx - m.vx) * dt * 5;
+          m.vz += (desiredVz - m.vz) * dt * 5;
+        }
+      }
+      m.x += m.vx * dt;
+      m.z += m.vz * dt;
+      m.mesh.position.set(m.x, 0.6, m.z);
+      m.mesh.rotation.y = Math.atan2(m.vx, -m.vz);
+
+      // Hit detection
+      for (const enemy of this.enemies) {
+        if (enemy.dead) continue;
+        const dx = m.x - enemy.x;
+        const dz = m.z - enemy.z;
+        if (Math.sqrt(dx * dx + dz * dz) < 0.8) {
+          this.damageEnemy(enemy, 3);
+          this.createExplosion(m.x, m.z, 1.5, 1.5);
+          (this as any).audioSystem?.playExplosion();
+          this.world.scene.remove(m.mesh);
+          this.homingMissiles.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Fuel Drums (Environmental Hazard) ──
+  private spawnFuelDrum(x: number, z: number) {
+    const group = new Group();
+    const drumGeo = new CylinderGeometry(0.5, 0.5, 1.0, 8);
+    const drumMat = new MeshStandardMaterial({ color: 0xcc4400, emissive: new Color(0xff4400), emissiveIntensity: 0.3 });
+    const drum = new Mesh(drumGeo, drumMat);
+    drum.position.y = 0.5;
+    group.add(drum);
+    // Hazard stripe
+    const stripeGeo = new CylinderGeometry(0.52, 0.52, 0.15, 8);
+    const stripeMat = new MeshBasicMaterial({ color: 0xffcc00 });
+    const stripe = new Mesh(stripeGeo, stripeMat);
+    stripe.position.y = 0.6;
+    group.add(stripe);
+    group.position.set(x, 0, z);
+    this.world.scene.add(group);
+    this.fuelDrums.push({ mesh: group, x, z, hp: 2 });
+  }
+
+  private detonateFuelDrum(drum: FuelDrum) {
+    // Bigger explosion than barrels, chain reaction
+    this.createExplosion(drum.x, drum.z, 4, 4);
+    this.state.screenShake = 0.8;
+    (this as any).audioSystem?.playExplosion();
+    // Damage enemies in blast radius
+    for (const enemy of this.enemies) {
+      if (enemy.dead) continue;
+      const dx = enemy.x - drum.x;
+      const dz = enemy.z - drum.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 4) {
+        this.damageEnemy(enemy, 5);
+      }
+    }
+    // Damage player if close
+    const pdx = this.state.playerX - drum.x;
+    const pdz = this.state.playerZ - drum.z;
+    if (Math.sqrt(pdx * pdx + pdz * pdz) < 3) {
+      this.damagePlayer();
+    }
+    // Chain reaction: detonate nearby fuel drums
+    for (const other of this.fuelDrums) {
+      if (other === drum || other.hp <= 0) continue;
+      const dx = other.x - drum.x;
+      const dz = other.z - drum.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 5) {
+        other.hp = 0;
+        // Defer chain detonation slightly
+        setTimeout(() => this.detonateFuelDrum(other), 150);
+      }
+    }
+    drum.hp = 0;
+    this.world.scene.remove(drum.mesh);
+  }
+
+  private updateFuelDrums(dt: number) {
+    const s = this.state;
+    for (let i = this.fuelDrums.length - 1; i >= 0; i--) {
+      const drum = this.fuelDrums[i];
+      if (drum.hp <= 0) {
+        this.fuelDrums.splice(i, 1);
+        continue;
+      }
+      // Remove if too far behind
+      if (drum.z > s.playerZ + 30) {
+        this.world.scene.remove(drum.mesh);
+        this.fuelDrums.splice(i, 1);
+        continue;
+      }
+      // Check bullet hits
+      for (let j = this.bullets.length - 1; j >= 0; j--) {
+        const b = this.bullets[j];
+        if (b.isEnemy) continue;
+        const dx = b.mesh.position.x - drum.x;
+        const dz = b.mesh.position.z - drum.z;
+        if (Math.sqrt(dx * dx + dz * dz) < 0.6) {
+          drum.hp -= b.damage;
+          this.world.scene.remove(b.mesh);
+          this.bullets.splice(j, 1);
+          if (drum.hp <= 0) {
+            this.detonateFuelDrum(drum);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Electric Fences (Environmental Hazard) ──
+  private spawnElectricFence(x: number, z: number) {
+    const group = new Group();
+    const postGeo = new CylinderGeometry(0.08, 0.08, 1.2, 6);
+    const postMat = new MeshStandardMaterial({ color: 0x666666 });
+    const fenceLen = 3;
+    // Two posts
+    const post1 = new Mesh(postGeo, postMat);
+    post1.position.set(-fenceLen / 2, 0.6, 0);
+    group.add(post1);
+    const post2 = new Mesh(postGeo, postMat);
+    post2.position.set(fenceLen / 2, 0.6, 0);
+    group.add(post2);
+    // Wire
+    const wireGeo = new BoxGeometry(fenceLen, 0.03, 0.03);
+    const wireMat = new MeshBasicMaterial({ color: 0x00ccff, transparent: true, opacity: 0.8 });
+    for (let row = 0; row < 3; row++) {
+      const wire = new Mesh(wireGeo, wireMat.clone());
+      wire.position.y = 0.3 + row * 0.3;
+      wire.name = `wire${row}`;
+      group.add(wire);
+    }
+    // Spark meshes for when electrified
+    const sparkMeshes: Mesh[] = [];
+    for (let s = 0; s < 4; s++) {
+      const sparkGeo = new SphereGeometry(0.06, 4, 4);
+      const sparkMat = new MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0 });
+      const spark = new Mesh(sparkGeo, sparkMat);
+      spark.position.set((Math.random() - 0.5) * fenceLen, 0.3 + Math.random() * 0.6, 0);
+      group.add(spark);
+      sparkMeshes.push(spark);
+    }
+    group.position.set(x, 0, z);
+    this.world.scene.add(group);
+    this.electricFences.push({
+      mesh: group, x, z, length: fenceLen, angle: 0,
+      electrifiedTimer: Math.random() * 3,
+      onDuration: 2, offDuration: 1.5,
+      isOn: true, sparkMeshes,
+    });
+  }
+
+  private updateElectricFences(dt: number) {
+    const s = this.state;
+    for (let i = this.electricFences.length - 1; i >= 0; i--) {
+      const fence = this.electricFences[i];
+      // Remove if too far behind
+      if (fence.z > s.playerZ + 30) {
+        this.world.scene.remove(fence.mesh);
+        this.electricFences.splice(i, 1);
+        continue;
+      }
+      // Toggle cycle
+      fence.electrifiedTimer -= dt;
+      if (fence.electrifiedTimer <= 0) {
+        fence.isOn = !fence.isOn;
+        fence.electrifiedTimer = fence.isOn ? fence.onDuration : fence.offDuration;
+      }
+      // Visual sparks
+      for (const spark of fence.sparkMeshes) {
+        const mat = spark.material as MeshBasicMaterial;
+        if (fence.isOn) {
+          mat.opacity = 0.5 + Math.random() * 0.5;
+          spark.position.x = (Math.random() - 0.5) * fence.length;
+          spark.position.y = 0.3 + Math.random() * 0.6;
+        } else {
+          mat.opacity = 0;
+        }
+      }
+      // Wire glow
+      fence.mesh.traverse((child) => {
+        if (child instanceof Mesh && child.name.startsWith('wire')) {
+          const mat = child.material as MeshBasicMaterial;
+          mat.color.set(fence.isOn ? 0x00ffff : 0x333333);
+          mat.opacity = fence.isOn ? 0.6 + Math.random() * 0.3 : 0.3;
+        }
+      });
+      if (!fence.isOn) continue;
+      // Damage check: player and enemies touching the fence area
+      const halfLen = fence.length / 2;
+      // Player
+      const pdx = Math.abs(s.playerX - fence.x);
+      const pdz = Math.abs(s.playerZ - fence.z);
+      if (pdx < halfLen + 0.3 && pdz < 0.5) {
+        this.damagePlayer();
+      }
+      // Enemies
+      for (const enemy of this.enemies) {
+        if (enemy.dead) continue;
+        const edx = Math.abs(enemy.x - fence.x);
+        const edz = Math.abs(enemy.z - fence.z);
+        if (edx < halfLen + 0.3 && edz < 0.5) {
+          this.damageEnemy(enemy, dt * 10);
+        }
+      }
+    }
+  }
+
+  // ── Mortar Zones (Environmental Hazard) ──
+  private spawnMortarZone(x: number, z: number) {
+    const group = new Group();
+    const radius = 2;
+    // Warning circle (red ring)
+    const ringGeo = new RingGeometry(radius - 0.1, radius, 16);
+    const ringMat = new MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    ring.name = 'warningRing';
+    group.add(ring);
+    // Fill circle
+    const fillGeo = new CylinderGeometry(radius, radius, 0.01, 16);
+    const fillMat = new MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.05, side: DoubleSide });
+    const fill = new Mesh(fillGeo, fillMat);
+    fill.position.y = 0.01;
+    fill.name = 'warningFill';
+    group.add(fill);
+    group.position.set(x, 0, z);
+    this.world.scene.add(group);
+    this.mortarZones.push({
+      mesh: group, x, z, radius,
+      timer: 4 + Math.random() * 3,
+      warningTime: 1,
+      impactPending: false,
+    });
+  }
+
+  private updateMortarZones(dt: number) {
+    const s = this.state;
+    for (let i = this.mortarZones.length - 1; i >= 0; i--) {
+      const mz = this.mortarZones[i];
+      // Remove if too far behind
+      if (mz.z > s.playerZ + 30) {
+        this.world.scene.remove(mz.mesh);
+        this.mortarZones.splice(i, 1);
+        continue;
+      }
+      mz.timer -= dt;
+      // Warning phase: flash the circle
+      if (mz.timer <= mz.warningTime && mz.timer > 0) {
+        mz.impactPending = true;
+        const ringEl = mz.mesh.getObjectByName('warningRing') as Mesh;
+        const fillEl = mz.mesh.getObjectByName('warningFill') as Mesh;
+        if (ringEl) {
+          const mat = ringEl.material as MeshBasicMaterial;
+          mat.opacity = 0.4 + Math.sin(s.gameTime * 15) * 0.3;
+        }
+        if (fillEl) {
+          const mat = fillEl.material as MeshBasicMaterial;
+          mat.opacity = 0.1 + Math.sin(s.gameTime * 15) * 0.08;
+        }
+      }
+      // Impact
+      if (mz.timer <= 0 && mz.impactPending) {
+        mz.impactPending = false;
+        this.createExplosion(mz.x, mz.z, mz.radius * 1.5, 2);
+        (this as any).audioSystem?.playExplosion();
+        s.screenShake = 0.5;
+        // Damage player if in radius
+        const pdx = s.playerX - mz.x;
+        const pdz = s.playerZ - mz.z;
+        if (Math.sqrt(pdx * pdx + pdz * pdz) < mz.radius) {
+          this.damagePlayer();
+        }
+        // Damage enemies in radius
+        for (const enemy of this.enemies) {
+          if (enemy.dead) continue;
+          const edx = enemy.x - mz.x;
+          const edz = enemy.z - mz.z;
+          if (Math.sqrt(edx * edx + edz * edz) < mz.radius) {
+            this.damageEnemy(enemy, 4);
+          }
+        }
+        // Reset timer for next mortar strike
+        mz.timer = 5 + Math.random() * 4;
+        const ringEl = mz.mesh.getObjectByName('warningRing') as Mesh;
+        const fillEl = mz.mesh.getObjectByName('warningFill') as Mesh;
+        if (ringEl) (ringEl.material as MeshBasicMaterial).opacity = 0.3;
+        if (fillEl) (fillEl.material as MeshBasicMaterial).opacity = 0.05;
+      }
+    }
+  }
+
+  // ── Music Intensity Tracking ──
+  private updateMusicIntensity() {
+    const wave = this.state.wave;
+    let intensity = 0;
+    if (wave >= 20) intensity = 3; // frantic
+    else if (wave >= 10) intensity = 2; // intense
+    else if (wave >= 1) intensity = 1; // normal
+    if (this.state.bossActive) intensity = Math.max(intensity, 3);
+    if (intensity !== this.state.musicIntensity) {
+      this.state.musicIntensity = intensity;
+      (this as any).audioSystem?.setMusicIntensity(intensity);
+    }
   }
 
   getAchievements(): Map<string, boolean> { return this.achievements; }
