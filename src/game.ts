@@ -286,6 +286,19 @@ interface Decoy {
   maxTime: number;
 }
 
+interface WeatherParticle {
+  mesh: Mesh;
+  vx: number;
+  vy: number;
+  vz: number;
+  life: number;
+}
+
+interface ThreatArrow {
+  mesh: Group;
+  enemyId: number;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -413,6 +426,9 @@ export interface GameState {
   careerOfficerKills: number;
   careerTurretKills: number;
   careerDecoyUses: number;
+  // Weapon pickup flash
+  weaponPickupFlashTimer: number;
+  weaponPickupName: string;
 }
 
 // ── Constants ──
@@ -486,6 +502,9 @@ export class GameSystem extends createSystem({}) {
   private turretEmplacements: TurretEmplacement[] = [];
   private decoys: Decoy[] = [];
   private activeTurret: TurretEmplacement | null = null;
+  private weatherParticles: WeatherParticle[] = [];
+  private threatArrows: ThreatArrow[] = [];
+  private weaponPickupFlashMeshes: Mesh[] = [];
   private nextEnemyId = 0;
 
   init() {
@@ -601,6 +620,8 @@ export class GameSystem extends createSystem({}) {
       careerOfficerKills: 0,
       careerTurretKills: 0,
       careerDecoyUses: 0,
+      weaponPickupFlashTimer: 0,
+      weaponPickupName: '',
     };
   }
 
@@ -1906,6 +1927,17 @@ export class GameSystem extends createSystem({}) {
         break;
     }
     this.checkWeaponAchievements(type);
+
+    // Weapon pickup flash VFX
+    const weaponNames: Record<string, string> = {
+      spread: 'SPREAD GUN', rapid: 'RAPID FIRE', shield: 'SHIELD',
+      speed: 'SPEED BOOST', grenade: 'GRENADES +3', life: 'EXTRA LIFE',
+      score: '+500 PTS', flamethrower: 'FLAMETHROWER', beam: 'BEAM CANNON',
+      homing: 'HOMING MISSILES',
+    };
+    this.state.weaponPickupName = weaponNames[type] || type.toUpperCase();
+    this.state.weaponPickupFlashTimer = 2.0;
+    this.spawnWeaponPickupFlash();
   }
 
   // ── Wave Management ──
@@ -3423,6 +3455,9 @@ export class GameSystem extends createSystem({}) {
       this.updateTurretEmplacements(dt);
       this.updateDecoys(dt);
       this.updateOfficerAuras(dt);
+      this.updateWeatherParticles(dt);
+      this.updateThreatArrows(dt);
+      this.updateWeaponPickupFlash(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -4953,6 +4988,232 @@ export class GameSystem extends createSystem({}) {
       if (d.position.z > this.state.playerZ + 20) {
         this.world.scene.remove(d);
         return false;
+      }
+      return true;
+    });
+  }
+
+  // ── Weather Atmosphere System ──
+  private readonly MAX_WEATHER_PARTICLES = 60;
+
+  private updateWeatherParticles(dt: number) {
+    const s = this.state;
+    const biome = s.currentBiome; // 0=Military 1=Desert 2=Arctic 3=Neon
+
+    // Spawn new weather particles
+    const spawnRate = 3; // per second
+    const toSpawn = Math.random() < spawnRate * dt ? 1 : 0;
+    for (let i = 0; i < toSpawn && this.weatherParticles.length < this.MAX_WEATHER_PARTICLES; i++) {
+      const px = s.playerX + (Math.random() - 0.5) * FIELD_WIDTH * 1.2;
+      const pz = s.playerZ + (Math.random() - 0.5) * FIELD_DEPTH * 0.8 - 4;
+      let geo: BufferGeometry;
+      let mat: MeshBasicMaterial;
+      let vx = 0, vy = 0, vz = 0, life = 2;
+
+      if (biome === 0) {
+        // Military — Rain: thin vertical streaks
+        geo = new CylinderGeometry(0.01, 0.01, 0.6, 3);
+        mat = new MeshBasicMaterial({ color: 0x88bbff, transparent: true, opacity: 0.5 });
+        vy = -12 - Math.random() * 4;
+        vz = -1;
+        life = 1.5;
+      } else if (biome === 1) {
+        // Desert — Sandstorm: horizontal drifting tan particles
+        geo = new SphereGeometry(0.04, 3, 2);
+        mat = new MeshBasicMaterial({ color: 0xccaa66, transparent: true, opacity: 0.6 });
+        vx = -4 - Math.random() * 3;
+        vy = (Math.random() - 0.5) * 2;
+        vz = (Math.random() - 0.5) * 2;
+        life = 2.5;
+      } else if (biome === 2) {
+        // Arctic — Snow: slow drifting white particles
+        geo = new SphereGeometry(0.03, 4, 3);
+        mat = new MeshBasicMaterial({ color: 0xeeeeff, transparent: true, opacity: 0.7 });
+        vx = (Math.random() - 0.5) * 1.5;
+        vy = -1.5 - Math.random();
+        vz = (Math.random() - 0.5) * 0.5;
+        life = 4;
+      } else {
+        // Neon — Electric sparks: bright erratic
+        geo = new SphereGeometry(0.025, 3, 2);
+        mat = new MeshBasicMaterial({ color: 0xff44ff, transparent: true, opacity: 0.9, blending: AdditiveBlending });
+        vx = (Math.random() - 0.5) * 8;
+        vy = (Math.random() - 0.5) * 6;
+        vz = (Math.random() - 0.5) * 8;
+        life = 0.4 + Math.random() * 0.3;
+      }
+
+      const mesh = new Mesh(geo, mat);
+      mesh.position.set(px, 3 + Math.random() * 6, pz);
+      this.world.scene.add(mesh);
+      this.weatherParticles.push({ mesh, vx, vy, vz, life });
+    }
+
+    // Update existing particles
+    this.weatherParticles = this.weatherParticles.filter(p => {
+      p.life -= dt;
+      if (p.life <= 0 || p.mesh.position.y < -0.5) {
+        this.world.scene.remove(p.mesh);
+        return false;
+      }
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      // Fade near end of life
+      const opacity = Math.min(1, p.life * 2);
+      (p.mesh.material as MeshBasicMaterial).opacity = opacity * (biome === 3 ? 0.9 : 0.6);
+      return true;
+    });
+  }
+
+  // ── Threat Indicator Arrows ──
+  private updateThreatArrows(_dt: number) {
+    const s = this.state;
+    const cam = this.world.camera;
+    // Arrow height in world Y
+    const arrowY = 1.5;
+    // Camera visible range estimate: camera is top-down at y~18 looking at player
+    const visibleAheadZ = s.playerZ - 14; // how far ahead of player is visible
+    const visibleBehindZ = s.playerZ + 4;
+    const visibleLeftX = s.playerX - FIELD_WIDTH * 0.55;
+    const visibleRightX = s.playerX + FIELD_WIDTH * 0.55;
+
+    // Find offscreen enemies worth indicating (boss, tank, helicopter, apc)
+    const threatTypes = new Set(['boss', 'tank', 'helicopter', 'apc', 'superTank']);
+    const offscreenThreats: Enemy[] = [];
+    for (const enemy of this.enemies) {
+      if (enemy.dead) continue;
+      const isImportant = threatTypes.has(enemy.type) || enemy.hp >= 8;
+      if (!isImportant) continue;
+      // Check if offscreen
+      if (enemy.z < visibleAheadZ || enemy.z > visibleBehindZ ||
+          enemy.x < visibleLeftX || enemy.x > visibleRightX) {
+        offscreenThreats.push(enemy);
+      }
+    }
+
+    // Remove stale arrows
+    const activeIds = new Set(offscreenThreats.map(e => e.id));
+    this.threatArrows = this.threatArrows.filter(a => {
+      if (!activeIds.has(a.enemyId)) {
+        this.world.scene.remove(a.mesh);
+        return false;
+      }
+      return true;
+    });
+
+    // Create or update arrows
+    const existingIds = new Set(this.threatArrows.map(a => a.enemyId));
+    for (const threat of offscreenThreats) {
+      let arrow = this.threatArrows.find(a => a.enemyId === threat.id);
+      if (!arrow) {
+        // Create new arrow indicator
+        const group = new Group();
+        const cone = new Mesh(
+          new ConeGeometry(0.25, 0.6, 4),
+          new MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.85, blending: AdditiveBlending })
+        );
+        group.add(cone);
+        // Small dot behind arrow
+        const dot = new Mesh(
+          new SphereGeometry(0.12, 4, 3),
+          new MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 })
+        );
+        dot.position.y = -0.4;
+        group.add(dot);
+        this.world.scene.add(group);
+        arrow = { mesh: group, enemyId: threat.id };
+        this.threatArrows.push(arrow);
+      }
+
+      // Position arrow at edge of visible area pointing toward enemy
+      const dx = threat.x - s.playerX;
+      const dz = threat.z - s.playerZ;
+      const angle = Math.atan2(dx, dz);
+      // Clamp arrow position to visible edge
+      const edgeX = Math.max(visibleLeftX + 1, Math.min(visibleRightX - 1, threat.x));
+      const edgeZ = threat.z < visibleAheadZ ? visibleAheadZ + 0.5 :
+                    threat.z > visibleBehindZ ? visibleBehindZ - 0.5 : threat.z;
+      arrow.mesh.position.set(edgeX, arrowY, edgeZ);
+      // Point cone toward the enemy direction
+      arrow.mesh.rotation.set(0, 0, 0);
+      arrow.mesh.rotation.z = -angle;
+      arrow.mesh.rotation.x = -Math.PI / 2;
+      // Pulse the arrow opacity
+      const pulse = 0.6 + Math.sin(Date.now() * 0.006) * 0.3;
+      ((arrow.mesh.children[0] as Mesh).material as MeshBasicMaterial).opacity = pulse;
+    }
+  }
+
+  // ── Weapon Pickup Flash VFX ──
+  private spawnWeaponPickupFlash() {
+    const s = this.state;
+    const colors = this.getColors();
+    // Burst of flash particles around player
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const speed = 3 + Math.random() * 2;
+      const geo = new SphereGeometry(0.08, 4, 3);
+      const mat = new MeshBasicMaterial({
+        color: colors.accent,
+        transparent: true,
+        opacity: 1,
+        blending: AdditiveBlending,
+      });
+      const mesh = new Mesh(geo, mat);
+      mesh.position.set(s.playerX, 1.0, s.playerZ);
+      this.world.scene.add(mesh);
+      this.weaponPickupFlashMeshes.push(mesh);
+
+      // Store velocity in userData
+      (mesh as any)._flashVx = Math.cos(angle) * speed;
+      (mesh as any)._flashVz = Math.sin(angle) * speed;
+      (mesh as any)._flashVy = 1 + Math.random() * 2;
+      (mesh as any)._flashLife = 0.6 + Math.random() * 0.3;
+    }
+    // Ring flash mesh
+    const ring = new Mesh(
+      new RingGeometry(0.1, 0.5, 16),
+      new MeshBasicMaterial({ color: colors.primary, transparent: true, opacity: 0.9, side: DoubleSide, blending: AdditiveBlending })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(s.playerX, 0.5, s.playerZ);
+    this.world.scene.add(ring);
+    (ring as any)._flashVx = 0;
+    (ring as any)._flashVz = 0;
+    (ring as any)._flashVy = 0;
+    (ring as any)._flashLife = 0.5;
+    (ring as any)._isRing = true;
+    this.weaponPickupFlashMeshes.push(ring);
+  }
+
+  private updateWeaponPickupFlash(dt: number) {
+    const s = this.state;
+    if (s.weaponPickupFlashTimer > 0) {
+      s.weaponPickupFlashTimer -= dt;
+      if (s.weaponPickupFlashTimer <= 0) {
+        s.weaponPickupName = '';
+      }
+    }
+    // Update flash particles
+    this.weaponPickupFlashMeshes = this.weaponPickupFlashMeshes.filter(m => {
+      const life = (m as any)._flashLife - dt;
+      (m as any)._flashLife = life;
+      if (life <= 0) {
+        this.world.scene.remove(m);
+        return false;
+      }
+      if ((m as any)._isRing) {
+        // Expand ring
+        const scale = 1 + (0.5 - life) * 8;
+        m.scale.set(scale, scale, scale);
+        (m.material as MeshBasicMaterial).opacity = life * 2;
+      } else {
+        m.position.x += (m as any)._flashVx * dt;
+        m.position.y += (m as any)._flashVy * dt;
+        m.position.z += (m as any)._flashVz * dt;
+        (m as any)._flashVy -= 6 * dt; // gravity
+        (m.material as MeshBasicMaterial).opacity = life * 1.5;
       }
       return true;
     });

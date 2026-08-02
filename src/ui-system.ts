@@ -730,6 +730,13 @@ export class UISystem extends createSystem({
     } else {
       setText(this.hudDoc, 'hud-decoy', 'H: Deploy Decoy');
     }
+
+    // Weapon pickup flash text
+    if (s.weaponPickupFlashTimer > 0) {
+      setText(this.hudDoc, 'hud-weapon-pickup', `⚡ ${s.weaponPickupName} ⚡`);
+    } else {
+      setText(this.hudDoc, 'hud-weapon-pickup', '');
+    }
   }
 
   private updateResults(s: GameState) {
