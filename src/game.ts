@@ -113,6 +113,34 @@ interface Obstacle {
   radius: number;
 }
 
+interface SupplyCrate {
+  mesh: Group;
+  x: number;
+  z: number;
+  vy: number;
+  y: number;
+  landed: boolean;
+  bobTimer: number;
+  life: number;
+}
+
+interface FlameParticle {
+  mesh: Mesh;
+  x: number;
+  z: number;
+  vx: number;
+  vz: number;
+  life: number;
+  maxLife: number;
+}
+
+interface BeamState {
+  active: boolean;
+  angle: number;
+  length: number;
+  mesh: Mesh | null;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -126,10 +154,16 @@ export interface GameState {
   bestCombo: number;
   grenadeCount: number;
   maxGrenades: number;
-  weaponType: 'single' | 'spread' | 'rapid' | 'laser';
+  weaponType: 'single' | 'spread' | 'rapid' | 'laser' | 'flamethrower' | 'beam';
   weaponTimer: number;
   shieldTimer: number;
   speedBoostTimer: number;
+  killStreak: number;
+  killStreakBest: number;
+  killStreakSpeedActive: boolean;
+  killStreakRapidActive: boolean;
+  killStreakShieldActive: boolean;
+  supplyDropTimer: number;
   playerX: number;
   playerZ: number;
   playerAngle: number;
@@ -198,6 +232,9 @@ export class GameSystem extends createSystem({}) {
   private groundTiles: Mesh[] = [];
   private lastTileZ = 0;
   private treads: Mesh[] = [];
+  private supplyCrates: SupplyCrate[] = [];
+  private flameParticles: FlameParticle[] = [];
+  private beamState: BeamState = { active: false, angle: 0, length: 12, mesh: null };
 
   init() {
     this.state = this.createDefaultState();
@@ -223,6 +260,12 @@ export class GameSystem extends createSystem({}) {
       weaponTimer: 0,
       shieldTimer: 0,
       speedBoostTimer: 0,
+      killStreak: 0,
+      killStreakBest: 0,
+      killStreakSpeedActive: false,
+      killStreakRapidActive: false,
+      killStreakShieldActive: false,
+      supplyDropTimer: 30,
       playerX: 0,
       playerZ: 0,
       playerAngle: 0,
@@ -794,7 +837,7 @@ export class GameSystem extends createSystem({}) {
   // ── Power-Up ──
   private spawnPowerUp(x: number, z: number) {
     const colors = this.getColors();
-    const types = ['spread', 'rapid', 'shield', 'speed', 'grenade', 'life', 'score'];
+    const types = ['spread', 'rapid', 'shield', 'speed', 'grenade', 'life', 'score', 'flamethrower', 'beam'];
     const type = types[Math.floor(Math.random() * types.length)];
 
     const group = new Group();
@@ -810,6 +853,8 @@ export class GameSystem extends createSystem({}) {
       case 'grenade': pColor = '#ffaa00'; break;
       case 'life': pColor = '#ff4444'; break;
       case 'score': pColor = '#ffff00'; break;
+      case 'flamethrower': pColor = '#ff6600'; break;
+      case 'beam': pColor = '#00ffff'; break;
     }
     const baseMat = new MeshBasicMaterial({ color: pColor, transparent: true, opacity: 0.7 });
     group.add(new Mesh(baseGeo, baseMat));
@@ -909,6 +954,11 @@ export class GameSystem extends createSystem({}) {
       enemy.deathTimer = 0.3;
       this.state.kills++;
       this.state.totalKills++;
+      this.state.killStreak++;
+      if (this.state.killStreak > this.state.killStreakBest) {
+        this.state.killStreakBest = this.state.killStreak;
+      }
+      this.checkKillStreakRewards();
 
       // Combo
       this.state.combo++;
@@ -959,6 +1009,10 @@ export class GameSystem extends createSystem({}) {
     this.state.weaponTimer = 0;
     this.state.combo = 0;
     this.state.comboTimer = 0;
+    this.state.killStreak = 0;
+    this.state.killStreakSpeedActive = false;
+    this.state.killStreakRapidActive = false;
+    this.state.killStreakShieldActive = false;
     this.state.screenShake = 0.4;
 
     const colors = this.getColors();
@@ -1003,10 +1057,240 @@ export class GameSystem extends createSystem({}) {
       case 'score':
         this.state.score += 500;
         break;
+      case 'flamethrower':
+        this.state.weaponType = 'flamethrower';
+        this.state.weaponTimer = 10;
+        break;
+      case 'beam':
+        this.state.weaponType = 'beam';
+        this.state.weaponTimer = 12;
+        break;
     }
   }
 
   // ── Wave Management ──
+  // ── Kill Streak Rewards ──
+  private checkKillStreakRewards() {
+    const ks = this.state.killStreak;
+    const s = this.state;
+    // 5 kills: speed boost
+    if (ks === 5 && !s.killStreakSpeedActive) {
+      s.killStreakSpeedActive = true;
+      s.speedBoostTimer = Math.max(s.speedBoostTimer, 8);
+    }
+    // 10 kills: rapid fire
+    if (ks === 10 && !s.killStreakRapidActive) {
+      s.killStreakRapidActive = true;
+      s.weaponType = 'rapid';
+      s.weaponTimer = Math.max(s.weaponTimer, 12);
+    }
+    // 15 kills: shield
+    if (ks === 15 && !s.killStreakShieldActive) {
+      s.killStreakShieldActive = true;
+      s.shieldTimer = Math.max(s.shieldTimer, 15);
+    }
+    // 25 kills: airstrike screen-clear
+    if (ks === 25) {
+      this.triggerAirstrike();
+      s.killStreak = 0; // reset streak after airstrike
+      s.killStreakSpeedActive = false;
+      s.killStreakRapidActive = false;
+      s.killStreakShieldActive = false;
+    }
+  }
+
+  private triggerAirstrike() {
+    const s = this.state;
+    s.screenShake = 1.0;
+    // Destroy all non-boss enemies
+    for (const enemy of this.enemies) {
+      if (!enemy.dead && enemy.type !== 'boss') {
+        enemy.hp = 0;
+        enemy.dead = true;
+        enemy.deathTimer = 0.3;
+        s.score += enemy.points * 2;
+        const colors = this.getColors();
+        for (let i = 0; i < 5; i++) {
+          this.spawnParticle(enemy.x, 0.5, enemy.z, colors.accent);
+        }
+      }
+    }
+    // Big explosions across the field
+    for (let i = 0; i < 5; i++) {
+      const ex = (Math.random() - 0.5) * FIELD_WIDTH;
+      const ez = s.playerZ - 5 - Math.random() * 15;
+      this.createExplosion(ex, ez, 4, 5);
+    }
+    (this as any).audioSystem?.playExplosion();
+  }
+
+  // ── Flamethrower ──
+  private fireFlamethrower(dt: number) {
+    const s = this.state;
+    const angle = s.playerAngle;
+    const colors = this.getColors();
+    // Spawn flame particles in a cone
+    for (let i = 0; i < 3; i++) {
+      const spread = (Math.random() - 0.5) * 0.6;
+      const a = angle + spread;
+      const speed = 8 + Math.random() * 4;
+      const geo = new SphereGeometry(0.15 + Math.random() * 0.1, 4, 4);
+      const mat = new MeshBasicMaterial({
+        color: Math.random() > 0.5 ? 0xff4400 : 0xffaa00,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const mesh = new Mesh(geo, mat);
+      mesh.position.set(s.playerX, 0.5, s.playerZ);
+      this.world.scene.add(mesh);
+      this.flameParticles.push({
+        mesh,
+        x: s.playerX,
+        z: s.playerZ,
+        vx: Math.sin(a) * speed,
+        vz: -Math.cos(a) * speed,
+        life: 0.4,
+        maxLife: 0.4,
+      });
+    }
+    // Damage enemies in cone
+    for (const enemy of this.enemies) {
+      if (enemy.dead) continue;
+      const dx = enemy.x - s.playerX;
+      const dz = enemy.z - s.playerZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist > 6) continue;
+      const enemyAngle = Math.atan2(dx, -dz);
+      let angleDiff = enemyAngle - angle;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      if (Math.abs(angleDiff) < 0.5) {
+        this.damageEnemy(enemy, dt * 8);
+      }
+    }
+  }
+
+  // ── Laser Beam ──
+  private fireBeam(dt: number) {
+    const s = this.state;
+    this.beamState.active = true;
+    this.beamState.angle = s.playerAngle;
+    // Create/update beam mesh
+    if (!this.beamState.mesh) {
+      const geo = new BoxGeometry(0.08, 0.08, 12);
+      const mat = new MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 });
+      this.beamState.mesh = new Mesh(geo, mat);
+      this.world.scene.add(this.beamState.mesh);
+    }
+    const beam = this.beamState.mesh;
+    const halfLen = 6;
+    beam.position.set(
+      s.playerX + Math.sin(s.playerAngle) * halfLen,
+      0.6,
+      s.playerZ - Math.cos(s.playerAngle) * halfLen,
+    );
+    beam.rotation.y = s.playerAngle;
+    beam.visible = true;
+    // Piercing damage — hit all enemies along beam path
+    for (const enemy of this.enemies) {
+      if (enemy.dead) continue;
+      const dx = enemy.x - s.playerX;
+      const dz = enemy.z - s.playerZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist > 14) continue;
+      // Project onto beam direction
+      const bx = Math.sin(s.playerAngle);
+      const bz = -Math.cos(s.playerAngle);
+      const dot = dx * bx + dz * bz;
+      if (dot < 0) continue;
+      const perpDist = Math.abs(dx * bz - dz * bx);
+      if (perpDist < 0.8) {
+        this.damageEnemy(enemy, dt * 6);
+      }
+    }
+  }
+
+  // ── Supply Drop Crate ──
+  private spawnSupplyCrate() {
+    const s = this.state;
+    const x = (Math.random() - 0.5) * (FIELD_WIDTH - 4);
+    const z = s.playerZ - 8 - Math.random() * 10;
+    const group = new Group();
+    // Crate body
+    const crateGeo = new BoxGeometry(0.8, 0.8, 0.8);
+    const crateMat = new MeshStandardMaterial({ color: 0x44aa44, emissive: new Color(0x00ff44), emissiveIntensity: 0.4 });
+    group.add(new Mesh(crateGeo, crateMat));
+    // Parachute
+    const chuteGeo = new ConeGeometry(0.8, 0.6, 6);
+    const chuteMat = new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: DoubleSide });
+    const chute = new Mesh(chuteGeo, chuteMat);
+    chute.position.y = 1.2;
+    chute.name = 'chute';
+    group.add(chute);
+    // Glow ring
+    const ringGeo = new RingGeometry(0.6, 0.8, 8);
+    const ringMat = new MeshBasicMaterial({ color: 0x00ff44, transparent: true, opacity: 0.3, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -0.01;
+    group.add(ring);
+
+    group.position.set(x, 8, z);
+    this.world.scene.add(group);
+    this.supplyCrates.push({
+      mesh: group,
+      x, z,
+      vy: -3,
+      y: 8,
+      landed: false,
+      bobTimer: 0,
+      life: 15,
+    });
+  }
+
+  // ── Enemy Formation Spawning ──
+  private spawnFormation() {
+    const s = this.state;
+    const formation = Math.random() < 0.5 ? 'v' : 'flank';
+    const centerX = (Math.random() - 0.5) * (FIELD_WIDTH - 6);
+    const centerZ = s.playerZ - 20 - Math.random() * 5;
+    const wave = s.wave;
+    const types: string[] = ['soldier'];
+    if (wave >= 3) types.push('heavy');
+    if (wave >= 5) types.push('runner');
+    const type = types[Math.floor(Math.random() * types.length)];
+
+    if (formation === 'v') {
+      // V-formation: 5 enemies in a V shape
+      const offsets = [
+        [0, 0], [-1.5, 2], [1.5, 2], [-3, 4], [3, 4],
+      ];
+      for (const [ox, oz] of offsets) {
+        if (this.enemies.length >= MAX_ENEMIES) break;
+        const enemy = this.createEnemy(type, centerX + ox, centerZ + oz);
+        enemy.speed *= 1.2; // formation enemies move faster together
+        this.enemies.push(enemy);
+        if (s.waveEnemiesLeft > 0) s.waveEnemiesLeft--;
+      }
+    } else {
+      // Flanking squad: enemies approach from both sides
+      for (let i = 0; i < 3; i++) {
+        if (this.enemies.length >= MAX_ENEMIES) break;
+        const leftEnemy = this.createEnemy(type, -FIELD_WIDTH / 2 + 1, centerZ + i * 2);
+        leftEnemy.speed *= 1.3;
+        this.enemies.push(leftEnemy);
+        if (s.waveEnemiesLeft > 0) s.waveEnemiesLeft--;
+      }
+      for (let i = 0; i < 3; i++) {
+        if (this.enemies.length >= MAX_ENEMIES) break;
+        const rightEnemy = this.createEnemy(type, FIELD_WIDTH / 2 - 1, centerZ + i * 2);
+        rightEnemy.speed *= 1.3;
+        this.enemies.push(rightEnemy);
+        if (s.waveEnemiesLeft > 0) s.waveEnemiesLeft--;
+      }
+    }
+  }
+
   private startWave() {
     this.state.waveTimer = 0;
     const wave = this.state.wave;
@@ -1094,6 +1378,12 @@ export class GameSystem extends createSystem({}) {
     s.enemySpawnTimer = 0;
     s.bossActive = false;
     s.bossEntity = null;
+    s.killStreak = 0;
+    s.killStreakBest = 0;
+    s.killStreakSpeedActive = false;
+    s.killStreakRapidActive = false;
+    s.killStreakShieldActive = false;
+    s.supplyDropTimer = 30;
 
     if (mode === 2) s.lives = 99; // Zen
 
@@ -1115,6 +1405,15 @@ export class GameSystem extends createSystem({}) {
     this.particles = [];
     for (const o of this.obstacles) this.world.scene.remove(o.mesh);
     this.obstacles = [];
+    for (const sc of this.supplyCrates) this.world.scene.remove(sc.mesh);
+    this.supplyCrates = [];
+    for (const fp of this.flameParticles) this.world.scene.remove(fp.mesh);
+    this.flameParticles = [];
+    if (this.beamState.mesh) {
+      this.world.scene.remove(this.beamState.mesh);
+      this.beamState.mesh = null;
+      this.beamState.active = false;
+    }
   }
 
   // ── Main Update ──
@@ -1134,6 +1433,8 @@ export class GameSystem extends createSystem({}) {
       this.updatePowerUps(dt);
       this.updateParticles(dt);
       this.updateWaveLogic(dt);
+      this.updateSupplyCrates(dt);
+      this.updateFlameParticles(dt);
       this.updateCamera(dt);
       this.updateTimers(dt);
       this.updateScreenShake(dt);
@@ -1231,23 +1532,38 @@ export class GameSystem extends createSystem({}) {
 
     // Shooting
     s.shootCooldown -= dt;
-    if (shooting && s.shootCooldown <= 0) {
-      const cooldown = s.weaponType === 'rapid' ? RAPID_COOLDOWN : SHOOT_COOLDOWN;
-      s.shootCooldown = cooldown;
-      s.totalShots++;
+    // Hide beam when not firing
+    if (this.beamState.mesh && s.weaponType !== 'beam') {
+      this.beamState.mesh.visible = false;
+      this.beamState.active = false;
+    }
 
-      const bx = s.playerX;
-      const bz = s.playerZ;
+    if (shooting) {
+      if (s.weaponType === 'flamethrower') {
+        this.fireFlamethrower(dt);
+      } else if (s.weaponType === 'beam') {
+        this.fireBeam(dt);
+      } else if (s.shootCooldown <= 0) {
+        const cooldown = s.weaponType === 'rapid' ? RAPID_COOLDOWN : SHOOT_COOLDOWN;
+        s.shootCooldown = cooldown;
+        s.totalShots++;
 
-      if (s.weaponType === 'spread') {
-        this.fireBullet(bx, bz, s.playerAngle, false);
-        this.fireBullet(bx, bz, s.playerAngle - 0.2, false);
-        this.fireBullet(bx, bz, s.playerAngle + 0.2, false);
-      } else {
-        this.fireBullet(bx, bz, s.playerAngle, false);
+        const bx = s.playerX;
+        const bz = s.playerZ;
+
+        if (s.weaponType === 'spread') {
+          this.fireBullet(bx, bz, s.playerAngle, false);
+          this.fireBullet(bx, bz, s.playerAngle - 0.2, false);
+          this.fireBullet(bx, bz, s.playerAngle + 0.2, false);
+        } else {
+          this.fireBullet(bx, bz, s.playerAngle, false);
+        }
+
+        (this as any).audioSystem?.playShoot();
       }
-
-      (this as any).audioSystem?.playShoot();
+    } else if (s.weaponType === 'beam' && this.beamState.mesh) {
+      this.beamState.mesh.visible = false;
+      this.beamState.active = false;
     }
 
     // Grenade throw
@@ -1642,7 +1958,12 @@ export class GameSystem extends createSystem({}) {
     const spawnRate = Math.max(0.5, 2 - s.wave * 0.1);
     if (s.enemySpawnTimer >= spawnRate && s.waveEnemiesLeft > 0) {
       s.enemySpawnTimer = 0;
-      this.spawnWaveEnemy();
+      // Chance for formation spawn (wave 3+, 25% chance)
+      if (s.wave >= 3 && s.waveEnemiesLeft >= 5 && Math.random() < 0.25) {
+        this.spawnFormation();
+      } else {
+        this.spawnWaveEnemy();
+      }
     }
 
     // Wave complete check
@@ -1650,6 +1971,76 @@ export class GameSystem extends createSystem({}) {
       s.wave++;
       s.scrollSpeed = Math.min(5, 3 + s.wave * 0.15);
       this.startWave();
+    }
+  }
+
+  // ── Supply Crate Updates ──
+  private updateSupplyCrates(dt: number) {
+    const s = this.state;
+    // Supply drop timer
+    s.supplyDropTimer -= dt;
+    if (s.supplyDropTimer <= 0) {
+      s.supplyDropTimer = 25 + Math.random() * 15; // every 25-40 sec
+      this.spawnSupplyCrate();
+    }
+
+    for (let i = this.supplyCrates.length - 1; i >= 0; i--) {
+      const crate = this.supplyCrates[i];
+      if (!crate.landed) {
+        crate.y += crate.vy * dt;
+        if (crate.y <= 0.4) {
+          crate.y = 0.4;
+          crate.landed = true;
+          // Remove parachute
+          const chute = crate.mesh.getObjectByName('chute');
+          if (chute) crate.mesh.remove(chute);
+        }
+        crate.mesh.position.y = crate.y;
+      } else {
+        crate.life -= dt;
+        crate.bobTimer += dt;
+        crate.mesh.position.y = 0.4 + Math.sin(crate.bobTimer * 3) * 0.1;
+        // Pulse glow
+        crate.mesh.rotation.y += dt;
+
+        // Player pickup
+        const dx = s.playerX - crate.x;
+        const dz = s.playerZ - crate.z;
+        if (Math.sqrt(dx * dx + dz * dz) < 1.2) {
+          // Give rare weapon
+          const rareWeapons = ['flamethrower', 'beam', 'spread'];
+          const weapon = rareWeapons[Math.floor(Math.random() * rareWeapons.length)];
+          this.applyPowerUp(weapon);
+          // Bonus grenades
+          s.grenadeCount = Math.min(s.grenadeCount + 2, s.maxGrenades);
+          this.world.scene.remove(crate.mesh);
+          this.supplyCrates.splice(i, 1);
+          continue;
+        }
+        if (crate.life <= 0) {
+          this.world.scene.remove(crate.mesh);
+          this.supplyCrates.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  // ── Flame Particle Updates ──
+  private updateFlameParticles(dt: number) {
+    for (let i = this.flameParticles.length - 1; i >= 0; i--) {
+      const fp = this.flameParticles[i];
+      fp.life -= dt;
+      fp.x += fp.vx * dt;
+      fp.z += fp.vz * dt;
+      fp.mesh.position.set(fp.x, 0.5, fp.z);
+      const progress = 1 - fp.life / fp.maxLife;
+      fp.mesh.scale.setScalar(1 + progress * 2);
+      const mat = fp.mesh.material as MeshBasicMaterial;
+      mat.opacity = (1 - progress) * 0.7;
+      if (fp.life <= 0) {
+        this.world.scene.remove(fp.mesh);
+        this.flameParticles.splice(i, 1);
+      }
     }
   }
 

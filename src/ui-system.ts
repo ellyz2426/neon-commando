@@ -413,6 +413,14 @@ export class UISystem extends createSystem({
     } else {
       setText(this.hudDoc, 'hud-timer', '');
     }
+
+    // Kill streak indicator
+    if (s.killStreak >= 3) {
+      const nextReward = s.killStreak < 5 ? 5 : s.killStreak < 10 ? 10 : s.killStreak < 15 ? 15 : s.killStreak < 25 ? 25 : 25;
+      setText(this.hudDoc, 'hud-streak', `STREAK ${s.killStreak} → ${nextReward}`);
+    } else {
+      setText(this.hudDoc, 'hud-streak', '');
+    }
   }
 
   private updateResults(s: GameState) {

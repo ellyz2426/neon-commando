@@ -31,6 +31,10 @@
       font-size: 14;
       color: #ff4444;
     }
+    #hud-streak {
+      font-size: 12;
+      color: #ff00ff;
+    }
     .left-group {
       flex-direction: row;
       gap: 12;
@@ -56,6 +60,7 @@
       <div id="hud-combo"></div>
       <div id="hud-weapon"></div>
       <div id="hud-shield"></div>
+      <div id="hud-streak"></div>
       <div id="hud-timer"></div>
     </div>
     <div class="right-group">
