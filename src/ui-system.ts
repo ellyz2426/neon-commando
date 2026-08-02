@@ -61,6 +61,10 @@ export class UISystem extends createSystem({
     required: [PanelUI, PanelDocument],
     where: [eq(PanelUI, 'config', './ui/achievements.json')],
   },
+  leaderboardPanel: {
+    required: [PanelUI, PanelDocument],
+    where: [eq(PanelUI, 'config', './ui/leaderboard.json')],
+  },
 }) {
   private gameSystem!: GameSystem;
   private audioSystem!: AudioSystem;
@@ -72,6 +76,7 @@ export class UISystem extends createSystem({
   private statsEntity: Entity | null = null;
   private tutorialEntity: Entity | null = null;
   private achievementsEntity: Entity | null = null;
+  private leaderboardEntity: Entity | null = null;
   private menuDoc: UIKitDocument | null = null;
   private hudDoc: UIKitDocument | null = null;
   private pauseDoc: UIKitDocument | null = null;
@@ -80,6 +85,7 @@ export class UISystem extends createSystem({
   private statsDoc: UIKitDocument | null = null;
   private tutorialDoc: UIKitDocument | null = null;
   private achievementsDoc: UIKitDocument | null = null;
+  private leaderboardDoc: UIKitDocument | null = null;
   private selectedMode = 0;
   private selectedDifficulty = 0;
   private lastPhase = '';
@@ -142,6 +148,11 @@ export class UISystem extends createSystem({
     this.achievementsEntity.object3D!.position.set(3.5, 3, -3.5);
     this.achievementsEntity.object3D!.rotation.y = -0.35;
     this.achievementsEntity.addComponent(PanelUI, { config: './ui/achievements.json' });
+
+    // Leaderboard panel — world space, behind menu
+    this.leaderboardEntity = this.world.createTransformEntity();
+    this.leaderboardEntity.object3D!.position.set(0, 3, -4.5);
+    this.leaderboardEntity.addComponent(PanelUI, { config: './ui/leaderboard.json' });
 
   }
 
@@ -212,6 +223,14 @@ export class UISystem extends createSystem({
         this.togglePanel(this.achievementsEntity, true);
       });
 
+      // Leaderboard button
+      const lbBtn = doc.getElementById('btn-leaderboard') as UIKit.Text | undefined;
+      lbBtn?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        this.updateLeaderboardPanel();
+        this.togglePanel(this.leaderboardEntity, true);
+      });
+
       this.updateMenuHighlights();
     });
 
@@ -277,12 +296,54 @@ export class UISystem extends createSystem({
         });
       });
 
+      // SFX toggle
+      const sfxBtn = doc.getElementById('btn-sfx-toggle') as UIKit.Text | undefined;
+      sfxBtn?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        const s = this.gameSystem.getState();
+        s.sfxMuted = !s.sfxMuted;
+        this.audioSystem.setSfxMuted(s.sfxMuted);
+        setText(doc, 'btn-sfx-toggle', s.sfxMuted ? 'SFX: OFF' : 'SFX: ON');
+        this.gameSystem.saveSettings();
+      });
+
+      // Music toggle
+      const musicBtn = doc.getElementById('btn-music-toggle') as UIKit.Text | undefined;
+      musicBtn?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        const s = this.gameSystem.getState();
+        s.musicMuted = !s.musicMuted;
+        this.audioSystem.setMusicMuted(s.musicMuted);
+        setText(doc, 'btn-music-toggle', s.musicMuted ? 'Music: OFF' : 'Music: ON');
+        this.gameSystem.saveSettings();
+      });
+
+      // Shake intensity buttons
+      const shakeIds = ['btn-shake-off', 'btn-shake-low', 'btn-shake-high'];
+      shakeIds.forEach((id, idx) => {
+        const btn = doc.getElementById(id) as UIKit.Text | undefined;
+        btn?.addEventListener('click', () => {
+          this.audioSystem.playMenuSelect();
+          this.gameSystem.getState().shakeIntensity = idx;
+          this.updateShakeHighlights(doc);
+          this.gameSystem.saveSettings();
+        });
+      });
+
       // Close button
       const closeBtn = doc.getElementById('btn-close-settings') as UIKit.Text | undefined;
       closeBtn?.addEventListener('click', () => {
         this.audioSystem.playMenuSelect();
         this.togglePanel(this.settingsEntity, false);
       });
+
+      // Init display state
+      const s = this.gameSystem.getState();
+      setText(doc, 'btn-sfx-toggle', s.sfxMuted ? 'SFX: OFF' : 'SFX: ON');
+      setText(doc, 'btn-music-toggle', s.musicMuted ? 'Music: OFF' : 'Music: ON');
+      this.audioSystem.setSfxMuted(s.sfxMuted);
+      this.audioSystem.setMusicMuted(s.musicMuted);
+      this.updateShakeHighlights(doc);
     });
 
     // Stats panel qualify
@@ -323,6 +384,19 @@ export class UISystem extends createSystem({
         this.togglePanel(this.achievementsEntity, false);
       });
     });
+
+    // Leaderboard panel qualify
+    this.queries.leaderboardPanel.subscribe('qualify', (entity) => {
+      const doc = getDoc(entity);
+      if (!doc) return;
+      this.leaderboardDoc = doc;
+
+      const closeBtn = doc.getElementById('btn-close-leaderboard') as UIKit.Text | undefined;
+      closeBtn?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        this.togglePanel(this.leaderboardEntity, false);
+      });
+    });
   }
 
   private togglePanel(entity: Entity | null, show: boolean) {
@@ -356,6 +430,20 @@ export class UISystem extends createSystem({
     setText(this.statsDoc, 'stat-waves', `Best Wave: ${s.totalWaves}`);
     setText(this.statsDoc, 'stat-deaths', `Total Deaths: ${s.totalDeaths}`);
     setText(this.statsDoc, 'stat-highscore', `High Score: ${s.highScore}`);
+    setText(this.statsDoc, 'stat-missions', `Missions: ${s.careerMissions}`);
+    setText(this.statsDoc, 'stat-vehicles', `Vehicles Used: ${s.careerVehiclesUsed}`);
+    setText(this.statsDoc, 'stat-minekills', `Mine Kills: ${s.careerMineKills}`);
+    setText(this.statsDoc, 'stat-chains', `Chain Explosions: ${s.careerChainExplosions}`);
+    setText(this.statsDoc, 'stat-bosskills', `Boss Kills: ${s.careerBossKills}`);
+    const survMins = Math.floor(s.longestSurvivalTime / 60);
+    const survSecs = Math.floor(s.longestSurvivalTime % 60);
+    setText(this.statsDoc, 'stat-besttime', `Best Survival: ${survMins}:${String(survSecs).padStart(2, '0')}`);
+    let favWeapon = '---';
+    let maxKills = 0;
+    for (const [wep, count] of Object.entries(s.weaponKillCounts)) {
+      if (count > maxKills) { maxKills = count; favWeapon = wep.toUpperCase(); }
+    }
+    setText(this.statsDoc, 'stat-favweapon', `Top Weapon: ${favWeapon}`);
   }
 
   private updateAchievementsPanel() {
@@ -369,6 +457,28 @@ export class UISystem extends createSystem({
       setText(this.achievementsDoc, `ach-${i}`, has ? defs[i].label : defs[i].label.replace('🏆', '🔒'));
     }
     setText(this.achievementsDoc, 'ach-count', `${unlocked} / ${defs.length} Unlocked`);
+  }
+
+  private updateLeaderboardPanel() {
+    if (!this.leaderboardDoc) return;
+    const lb = this.gameSystem.getLeaderboard();
+    for (let i = 1; i <= 10; i++) {
+      if (i <= lb.length) {
+        const e = lb[i - 1];
+        setText(this.leaderboardDoc, `lb-${i}`, `#${i}  ${e.score}  W${e.wave}  ${e.date}`);
+      } else {
+        setText(this.leaderboardDoc, `lb-${i}`, `#${i} ---`);
+      }
+    }
+  }
+
+  private updateShakeHighlights(doc: UIKitDocument) {
+    const intensity = this.gameSystem.getState().shakeIntensity;
+    const labels = ['Off', 'Low', 'High'];
+    const ids = ['btn-shake-off', 'btn-shake-low', 'btn-shake-high'];
+    ids.forEach((id, idx) => {
+      setText(doc, id, idx === intensity ? `> ${labels[idx]} <` : labels[idx]);
+    });
   }
 
   update(delta: number) {
@@ -423,6 +533,7 @@ export class UISystem extends createSystem({
       this.togglePanel(this.statsEntity, false);
       this.togglePanel(this.tutorialEntity, false);
       this.togglePanel(this.achievementsEntity, false);
+      this.togglePanel(this.leaderboardEntity, false);
     }
   }
 
@@ -559,9 +670,13 @@ export class UISystem extends createSystem({
     setText(this.resultsDoc, 'results-title', isGameover ? 'GAME OVER' : 'MISSION COMPLETE');
     setText(this.resultsDoc, 'results-score', `Score: ${s.score}`);
     setText(this.resultsDoc, 'results-highscore', `High Score: ${s.highScore}`);
+    const rating = this.gameSystem.getPerformanceRating();
+    setText(this.resultsDoc, 'results-rating', `Rating: ${rating}`);
     setText(this.resultsDoc, 'results-wave', `Wave Reached: ${s.wave}`);
     setText(this.resultsDoc, 'results-kills', `Enemies Killed: ${s.kills}`);
     setText(this.resultsDoc, 'results-combo', `Best Combo: ${s.bestCombo}x`);
     setText(this.resultsDoc, 'results-time', `Time: ${Math.floor(s.gameTime / 60)}:${String(Math.floor(s.gameTime % 60)).padStart(2, '0')}`);
+    setText(this.resultsDoc, 'results-missions', `Missions: ${s.missionsCompleted}`);
+    setText(this.resultsDoc, 'results-achievements', `Achievements: ${s.runAchievementsEarned}`);
   }
 }

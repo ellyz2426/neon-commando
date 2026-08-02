@@ -333,6 +333,28 @@ export interface GameState {
   homingAmmo: number;
   // Music intensity level
   musicIntensity: number;
+  // Extended career stats (persisted)
+  careerMissions: number;
+  careerVehiclesUsed: number;
+  careerMineKills: number;
+  careerChainExplosions: number;
+  careerBossKills: number;
+  longestSurvivalTime: number;
+  weaponKillCounts: Record<string, number>;
+  // Per-run tracking
+  runAchievementsEarned: number;
+  // Settings (persisted)
+  sfxMuted: boolean;
+  musicMuted: boolean;
+  shakeIntensity: number; // 0=off 1=low 2=high
+  // Dodge roll
+  rollTimer: number;
+  rollCooldown: number;
+  rollDirX: number;
+  rollDirZ: number;
+  // Smoke grenades
+  smokeGrenadeCount: number;
+  currentBiome: number;
 }
 
 // ── Constants ──
@@ -354,6 +376,13 @@ const COLOR_SCHEMES = [
   { name: 'Desert', primary: '#ffcc44', secondary: '#ff6622', accent: '#ff8844', bg: '#1a1408', grid: '#2a2010', enemy: '#ff4422', bullet: '#ffee00' },
   { name: 'Arctic', primary: '#44ccff', secondary: '#ff4466', accent: '#88ddff', bg: '#081018', grid: '#102030', enemy: '#ff2244', bullet: '#aaeeff' },
   { name: 'Neon', primary: '#ff00ff', secondary: '#00ffff', accent: '#ffff00', bg: '#0a0020', grid: '#150030', enemy: '#ff0066', bullet: '#00ff88' },
+];
+
+const BIOME_THEMES = [
+  { fog: 0x0a1a0a, ground: 0x112211, border: 0x003300, ambient: 0x334433 },
+  { fog: 0x1a1408, ground: 0x2a2010, border: 0x443300, ambient: 0x443322 },
+  { fog: 0x081018, ground: 0x102030, border: 0x003355, ambient: 0x334455 },
+  { fog: 0x0a0020, ground: 0x150030, border: 0x220044, ambient: 0x443355 },
 ];
 
 // ── Main Game System ──
@@ -394,12 +423,14 @@ export class GameSystem extends createSystem({}) {
   private fuelDrums: FuelDrum[] = [];
   private electricFences: ElectricFence[] = [];
   private mortarZones: MortarZone[] = [];
+  private smokeClouds: Array<{ meshes: Mesh[]; x: number; z: number; timer: number; maxTime: number; radius: number }> = [];
   private nextEnemyId = 0;
 
   init() {
     this.state = this.createDefaultState();
     this.loadHighScore();
     this.loadAchievements();
+    this.loadLeaderboard();
     this.setupScene();
     this.initialized = true;
   }
@@ -475,6 +506,23 @@ export class GameSystem extends createSystem({}) {
       currentWeaponIdx: 0,
       homingAmmo: 0,
       musicIntensity: 0,
+      careerMissions: 0,
+      careerVehiclesUsed: 0,
+      careerMineKills: 0,
+      careerChainExplosions: 0,
+      careerBossKills: 0,
+      longestSurvivalTime: 0,
+      weaponKillCounts: {},
+      runAchievementsEarned: 0,
+      sfxMuted: false,
+      musicMuted: false,
+      shakeIntensity: 1,
+      rollTimer: 0,
+      rollCooldown: 0,
+      rollDirX: 0,
+      rollDirZ: 0,
+      smokeGrenadeCount: 2,
+      currentBiome: 0,
     };
   }
 
@@ -491,6 +539,20 @@ export class GameSystem extends createSystem({}) {
         this.state.totalPowerUps = s.totalPowerUps || 0;
         this.state.totalWaves = s.totalWaves || 0;
         this.state.totalDeaths = s.totalDeaths || 0;
+        this.state.careerMissions = s.careerMissions || 0;
+        this.state.careerVehiclesUsed = s.careerVehiclesUsed || 0;
+        this.state.careerMineKills = s.careerMineKills || 0;
+        this.state.careerChainExplosions = s.careerChainExplosions || 0;
+        this.state.careerBossKills = s.careerBossKills || 0;
+        this.state.longestSurvivalTime = s.longestSurvivalTime || 0;
+        this.state.weaponKillCounts = s.weaponKillCounts || {};
+      }
+      const settings = localStorage.getItem('neon-commando-settings');
+      if (settings) {
+        const st = JSON.parse(settings);
+        this.state.sfxMuted = !!st.sfxMuted;
+        this.state.musicMuted = !!st.musicMuted;
+        this.state.shakeIntensity = typeof st.shakeIntensity === 'number' ? st.shakeIntensity : 1;
       }
     } catch {}
   }
@@ -501,6 +563,12 @@ export class GameSystem extends createSystem({}) {
         this.state.highScore = this.state.score;
         localStorage.setItem('neon-commando-highscore', String(this.state.highScore));
       }
+      if (this.state.gameTime > this.state.longestSurvivalTime) {
+        this.state.longestSurvivalTime = this.state.gameTime;
+      }
+      if (this.state.wave > this.state.totalWaves) {
+        this.state.totalWaves = this.state.wave;
+      }
       localStorage.setItem('neon-commando-stats', JSON.stringify({
         totalKills: this.state.totalKills,
         totalGrenades: this.state.totalGrenades,
@@ -508,8 +576,26 @@ export class GameSystem extends createSystem({}) {
         totalPowerUps: this.state.totalPowerUps,
         totalWaves: this.state.totalWaves,
         totalDeaths: this.state.totalDeaths,
+        careerMissions: this.state.careerMissions,
+        careerVehiclesUsed: this.state.careerVehiclesUsed,
+        careerMineKills: this.state.careerMineKills,
+        careerChainExplosions: this.state.careerChainExplosions,
+        careerBossKills: this.state.careerBossKills,
+        longestSurvivalTime: this.state.longestSurvivalTime,
+        weaponKillCounts: this.state.weaponKillCounts,
       }));
+      this.addToLeaderboard(this.state.score, this.state.wave);
       this.checkScoreAchievements();
+    } catch {}
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem('neon-commando-settings', JSON.stringify({
+        sfxMuted: this.state.sfxMuted,
+        musicMuted: this.state.musicMuted,
+        shakeIntensity: this.state.shakeIntensity,
+      }));
     } catch {}
   }
 
@@ -568,6 +654,39 @@ export class GameSystem extends createSystem({}) {
       this.groundTiles.push(tile);
     }
     this.lastTileZ = 7 * 8;
+  }
+
+  private applyBiomeTransition(biomeIdx: number) {
+    const biome = BIOME_THEMES[biomeIdx];
+    const scene = this.world.scene;
+
+    // Update fog
+    if (scene.fog instanceof FogExp2) {
+      (scene.fog as FogExp2).color.setHex(biome.fog);
+    }
+    scene.background = new Color(biome.fog);
+
+    // Update ground tiles
+    for (const tile of this.groundTiles) {
+      const mat = tile.material as MeshStandardMaterial;
+      mat.color.setHex(biome.ground);
+    }
+
+    // Update border walls in environment group
+    this.environmentGroup.traverse((child) => {
+      if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) {
+        if ((child.material as MeshStandardMaterial).emissiveIntensity > 0) {
+          (child.material as MeshStandardMaterial).emissive.setHex(biome.border);
+        }
+      }
+    });
+
+    // Update ambient light
+    scene.traverse((child) => {
+      if (child instanceof AmbientLight) {
+        child.color.setHex(biome.ambient);
+      }
+    });
   }
 
   private createGroundTile(z: number, colors: ReturnType<typeof this.getColors>): Mesh {
@@ -1058,6 +1177,85 @@ export class GameSystem extends createSystem({}) {
     });
   }
 
+  // ── Smoke Grenade ──
+  private throwSmokeGrenade(x: number, z: number, angle: number) {
+    if (this.state.smokeGrenadeCount <= 0) return;
+    this.state.smokeGrenadeCount--;
+
+    // Lob forward and create cloud at impact point
+    const impactX = x + Math.sin(angle) * 6;
+    const impactZ = z - Math.cos(angle) * 6;
+
+    this.createSmokeCloud(impactX, impactZ);
+    this.state.screenShake = 0.1;
+  }
+
+  private createSmokeCloud(x: number, z: number) {
+    const meshes: Mesh[] = [];
+    const cloudRadius = 3.5;
+
+    // Create cluster of semi-transparent gray spheres
+    for (let i = 0; i < 12; i++) {
+      const size = 0.6 + Math.random() * 0.8;
+      const geo = new SphereGeometry(size, 8, 6);
+      const mat = new MeshBasicMaterial({
+        color: 0x888888,
+        transparent: true,
+        opacity: 0.35 + Math.random() * 0.15,
+      });
+      const sphere = new Mesh(geo, mat);
+      sphere.position.set(
+        x + (Math.random() - 0.5) * cloudRadius,
+        0.4 + Math.random() * 1.5,
+        z + (Math.random() - 0.5) * cloudRadius,
+      );
+      this.world.scene.add(sphere);
+      meshes.push(sphere);
+    }
+
+    this.smokeClouds.push({
+      meshes,
+      x, z,
+      timer: 5,
+      maxTime: 5,
+      radius: cloudRadius,
+    });
+  }
+
+  private updateSmokeClouds(dt: number) {
+    for (let i = this.smokeClouds.length - 1; i >= 0; i--) {
+      const cloud = this.smokeClouds[i];
+      cloud.timer -= dt;
+
+      // Fade out in last 1.5 seconds
+      const fadeStart = 1.5;
+      const opacity = cloud.timer < fadeStart ? (cloud.timer / fadeStart) * 0.45 : 0.45;
+      for (const m of cloud.meshes) {
+        const mat = m.material as MeshBasicMaterial;
+        mat.opacity = opacity;
+        // Slowly drift upward and expand
+        m.position.y += dt * 0.2;
+        m.scale.addScalar(dt * 0.08);
+      }
+
+      // Enemies inside cloud lose tracking
+      for (const enemy of this.enemies) {
+        if (enemy.dead) continue;
+        const dx = enemy.x - cloud.x;
+        const dz = enemy.z - cloud.z;
+        if (Math.sqrt(dx * dx + dz * dz) < cloud.radius) {
+          // Stop enemy shooting inside smoke
+          enemy.shootTimer = Math.max(enemy.shootTimer, 0.5);
+        }
+      }
+
+      if (cloud.timer <= 0) {
+        for (const m of cloud.meshes) this.world.scene.remove(m);
+        this.smokeClouds.splice(i, 1);
+      }
+    }
+  }
+
   // ── Explosions ──
   private createExplosion(x: number, z: number, radius: number, damage: number) {
     const colors = this.getColors();
@@ -1240,6 +1438,8 @@ export class GameSystem extends createSystem({}) {
       this.state.kills++;
       this.state.totalKills++;
       this.state.killStreak++;
+      const wt = this.state.weaponType;
+      this.state.weaponKillCounts[wt] = (this.state.weaponKillCounts[wt] || 0) + 1;
       if (this.state.inVehicle) this.state.vehicleKills++;
       if (this.state.killStreak > this.state.killStreakBest) {
         this.state.killStreakBest = this.state.killStreak;
@@ -1285,7 +1485,7 @@ export class GameSystem extends createSystem({}) {
 
   // ── Player Damage ──
   private damagePlayer() {
-    if (this.state.invincibleTimer > 0 || this.state.shieldTimer > 0) {
+    if (this.state.invincibleTimer > 0 || this.state.shieldTimer > 0 || this.state.rollTimer > 0) {
       if (this.state.shieldTimer > 0) {
         this.state.shieldTimer = 0;
         this.state.screenShake = 0.15;
@@ -1706,6 +1906,9 @@ export class GameSystem extends createSystem({}) {
     }
 
     (this as any).audioSystem?.playWaveStart();
+
+    // Environmental storytelling — debris in later waves
+    this.spawnWaveDebris();
   }
 
   private spawnWaveEnemy() {
@@ -1746,6 +1949,12 @@ export class GameSystem extends createSystem({}) {
     s.comboTimer = 0;
     s.bestCombo = 0;
     s.grenadeCount = 5;
+    s.smokeGrenadeCount = 2;
+    s.rollTimer = 0;
+    s.rollCooldown = 0;
+    s.rollDirX = 0;
+    s.rollDirZ = 0;
+    s.currentBiome = 0;
     s.weaponType = 'single';
     s.weaponTimer = 0;
     s.shieldTimer = 0;
@@ -1779,6 +1988,7 @@ export class GameSystem extends createSystem({}) {
     s.missionBriefTimer = 0;
     s.missionsCompleted = 0;
     s.companionKills = 0;
+    s.runAchievementsEarned = 0;
 
     this.spawnCompanion();
     this.startWave();
@@ -1825,8 +2035,14 @@ export class GameSystem extends createSystem({}) {
     this.powCages = [];
     for (const m of this.mines) this.world.scene.remove(m.mesh);
     this.mines = [];
+    for (const sc of this.smokeClouds) {
+      for (const m of sc.meshes) this.world.scene.remove(m);
+    }
+    this.smokeClouds = [];
     for (const sp of this.scorePopups) this.world.scene.remove(sp.mesh);
     this.scorePopups = [];
+    for (const d of this.debrisMeshes) this.world.scene.remove(d);
+    this.debrisMeshes = [];
   }
 
   // ── Vehicle System ──
@@ -1897,6 +2113,7 @@ export class GameSystem extends createSystem({}) {
     const s = this.state;
     s.inVehicle = true;
     s.vehicleHp = v.hp;
+    s.careerVehiclesUsed++;
     v.occupied = true;
     this.activeVehicle = v;
     this.playerGroup.visible = false;
@@ -2219,6 +2436,7 @@ export class GameSystem extends createSystem({}) {
       m.complete = true;
       s.score += m.bonusScore;
       s.missionsCompleted++;
+      s.careerMissions++;
       s.lives = Math.min(s.lives + 1, 9); // bonus life
       (this as any).audioSystem?.playMissionComplete();
       this.checkMissionAchievements();
@@ -2440,17 +2658,21 @@ export class GameSystem extends createSystem({}) {
   private detonateMine(mine: Mine) {
     if (!mine.armed) return;
     mine.armed = false;
+    this.state.careerMineKills++;
     this.createExplosion(mine.x, mine.z, 2.5, 3);
     this.world.scene.remove(mine.mesh);
 
     // Chain explosions — detonate nearby mines
+    let chained = false;
     for (const other of this.mines) {
       if (!other.armed) continue;
       const dx = other.x - mine.x, dz = other.z - mine.z;
       if (dx * dx + dz * dz < 9) { // within 3 units
+        chained = true;
         setTimeout(() => this.detonateMine(other), 100);
       }
     }
+    if (chained) this.state.careerChainExplosions++;
   }
 
   private updateMines(dt: number) {
@@ -2598,6 +2820,7 @@ export class GameSystem extends createSystem({}) {
       this.updateFuelDrums(dt);
       this.updateElectricFences(dt);
       this.updateMortarZones(dt);
+      this.updateSmokeClouds(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -2631,6 +2854,12 @@ export class GameSystem extends createSystem({}) {
     if (kb.getKeyPressed('KeyD') || kb.getKeyPressed('ArrowRight')) mx = 1;
     if (kb.getKeyPressed('Space') || kb.getKeyPressed('KeyK')) shooting = true;
     if (kb.getKeyDown('KeyE') || kb.getKeyDown('KeyJ')) grenadeThrow = true;
+    // Smoke grenade throw: G key
+    let smokeThrow = false;
+    if (kb.getKeyDown('KeyG')) smokeThrow = true;
+    // Dodge roll: Shift key
+    let rollTrigger = false;
+    if (kb.getKeyDown('ShiftLeft') || kb.getKeyDown('ShiftRight')) rollTrigger = true;
     if (kb.getKeyDown('Escape') || kb.getKeyDown('KeyP')) {
       s.phase = 'paused';
       return;
@@ -2667,6 +2896,7 @@ export class GameSystem extends createSystem({}) {
       }
       if (rightGP.getButtonPressed(InputComponent.Trigger)) shooting = true;
       if (rightGP.getButtonDown(InputComponent.A_Button)) grenadeThrow = true;
+      if (rightGP.getButtonDown(InputComponent.Y_Button)) rollTrigger = true;
       if (rightGP.getButtonDown(InputComponent.B_Button)) {
         s.phase = 'paused';
         return;
@@ -2675,15 +2905,43 @@ export class GameSystem extends createSystem({}) {
     if (leftGP) {
       if (leftGP.getButtonDown(InputComponent.Trigger)) grenadeThrow = true;
       if (leftGP.getButtonDown(InputComponent.X_Button)) this.cycleWeapon();
+      if (leftGP.getButtonDown(InputComponent.A_Button)) smokeThrow = true;
     }
 
-    // Movement
+    // Dodge roll cooldown
+    if (s.rollCooldown > 0) s.rollCooldown -= dt;
+
+    // Initiate dodge roll
+    if (rollTrigger && s.rollCooldown <= 0 && s.rollTimer <= 0 && !s.inVehicle) {
+      s.rollTimer = 0.3;
+      s.rollCooldown = 1.5;
+      if (mx !== 0 || mz !== 0) {
+        const mag = Math.sqrt(mx * mx + mz * mz);
+        s.rollDirX = mx / mag;
+        s.rollDirZ = mz / mag;
+      } else {
+        s.rollDirX = Math.sin(s.playerAngle);
+        s.rollDirZ = -Math.cos(s.playerAngle);
+      }
+    }
+
+    // Movement — dodge roll overrides normal movement
     const vehicleSpeedMult = s.inVehicle ? 1.6 : 1;
     const speed = (s.speedBoostTimer > 0 ? s.playerSpeed * 1.5 : s.playerSpeed) * vehicleSpeedMult;
-    if (mx !== 0 || mz !== 0) {
-      const mag = Math.sqrt(mx * mx + mz * mz);
-      s.playerX += (mx / mag) * speed * dt;
-      s.playerZ += (mz / mag) * speed * dt;
+    if (s.rollTimer > 0) {
+      s.rollTimer -= dt;
+      const rollSpeed = s.playerSpeed * 3;
+      s.playerX += s.rollDirX * rollSpeed * dt;
+      s.playerZ += s.rollDirZ * rollSpeed * dt;
+      // Quick spin visual
+      this.playerGroup.rotation.x = (s.rollTimer / 0.3) * Math.PI * 2;
+    } else {
+      this.playerGroup.rotation.x = 0;
+      if (mx !== 0 || mz !== 0) {
+        const mag = Math.sqrt(mx * mx + mz * mz);
+        s.playerX += (mx / mag) * speed * dt;
+        s.playerZ += (mz / mag) * speed * dt;
+      }
     }
 
     // Clamp to field
@@ -2752,6 +3010,11 @@ export class GameSystem extends createSystem({}) {
     // Grenade throw
     if (grenadeThrow) {
       this.throwGrenade(s.playerX, s.playerZ, s.playerAngle);
+    }
+
+    // Smoke grenade throw
+    if (smokeThrow) {
+      this.throwSmokeGrenade(s.playerX, s.playerZ, s.playerAngle);
     }
 
     // Vehicle mounted gun — faster fire, wider spread
@@ -2926,6 +3189,7 @@ export class GameSystem extends createSystem({}) {
             s.bossActive = false;
             // Track boss type achievements
             this.checkBossAchievement(s.bossType);
+            s.careerBossKills++;
             s.bossEntity = null;
           }
         }
@@ -3253,6 +3517,13 @@ export class GameSystem extends createSystem({}) {
     if (s.waveEnemiesLeft <= 0 && this.enemies.filter(e => !e.dead).length === 0) {
       s.wave++;
       s.scrollSpeed = Math.min(5, 3 + s.wave * 0.15);
+
+      // Biome transition every 5 waves
+      if (s.wave % 5 === 1 && s.wave > 1) {
+        s.currentBiome = (s.currentBiome + 1) % BIOME_THEMES.length;
+        this.applyBiomeTransition(s.currentBiome);
+      }
+
       this.startWave();
     }
   }
@@ -3296,6 +3567,8 @@ export class GameSystem extends createSystem({}) {
           this.applyPowerUp(weapon);
           // Bonus grenades
           s.grenadeCount = Math.min(s.grenadeCount + 2, s.maxGrenades);
+          // Refill smoke grenades
+          s.smokeGrenadeCount = Math.min(s.smokeGrenadeCount + 1, 4);
           this.world.scene.remove(crate.mesh);
           this.supplyCrates.splice(i, 1);
           continue;
@@ -3379,8 +3652,9 @@ export class GameSystem extends createSystem({}) {
   private updateScreenShake(dt: number) {
     const s = this.state;
     if (s.screenShake > 0) {
-      s.screenShakeX = (Math.random() - 0.5) * s.screenShake * 2;
-      s.screenShakeZ = (Math.random() - 0.5) * s.screenShake * 2;
+      const mult = [0, 0.5, 1][s.shakeIntensity] ?? 1;
+      s.screenShakeX = (Math.random() - 0.5) * s.screenShake * 2 * mult;
+      s.screenShakeZ = (Math.random() - 0.5) * s.screenShake * 2 * mult;
       s.screenShake -= dt * 2;
     } else {
       s.screenShakeX = 0;
@@ -3470,6 +3744,7 @@ export class GameSystem extends createSystem({}) {
     if (this.achievements.has(id)) return;
     this.achievements.set(id, true);
     this.achievementQueue.push(id);
+    this.state.runAchievementsEarned++;
     this.saveAchievements();
     (this as any).audioSystem?.playAchievementUnlock();
   }
@@ -3924,6 +4199,97 @@ export class GameSystem extends createSystem({}) {
       this.state.musicIntensity = intensity;
       (this as any).audioSystem?.setMusicIntensity(intensity);
     }
+  }
+
+  // ── Leaderboard ──
+  private leaderboard: Array<{ score: number; wave: number; date: string }> = [];
+
+  private loadLeaderboard() {
+    try {
+      const data = localStorage.getItem('neon-commando-leaderboard');
+      if (data) this.leaderboard = JSON.parse(data);
+    } catch {}
+  }
+
+  private addToLeaderboard(score: number, wave: number) {
+    if (score <= 0) return;
+    const entry = { score, wave, date: new Date().toLocaleDateString() };
+    this.leaderboard.push(entry);
+    this.leaderboard.sort((a, b) => b.score - a.score);
+    if (this.leaderboard.length > 10) this.leaderboard.length = 10;
+    try {
+      localStorage.setItem('neon-commando-leaderboard', JSON.stringify(this.leaderboard));
+    } catch {}
+  }
+
+  getLeaderboard() { return this.leaderboard; }
+
+  // ── Performance Rating ──
+  getPerformanceRating(): string {
+    const s = this.state;
+    let pts = 0;
+    pts += Math.min(s.score / 1000, 50);
+    pts += Math.min(s.wave * 2, 30);
+    pts += Math.min(s.kills * 0.1, 15);
+    pts += Math.min(s.bestCombo, 10);
+    pts += s.missionsCompleted * 3;
+    if (pts >= 80) return 'S';
+    if (pts >= 60) return 'A';
+    if (pts >= 40) return 'B';
+    if (pts >= 20) return 'C';
+    return 'D';
+  }
+
+  // ── Environmental Debris ──
+  private debrisMeshes: Group[] = [];
+
+  private spawnWaveDebris() {
+    const w = this.state.wave;
+    if (w < 5) return;
+    const colors = this.getColors();
+    const count = Math.min(Math.floor((w - 4) / 3), 6);
+    for (let i = 0; i < count; i++) {
+      const group = new Group();
+      const type = Math.floor(Math.random() * 3);
+      if (type === 0) {
+        const ring = new Mesh(
+          new RingGeometry(0.5, 1.2, 8),
+          new MeshStandardMaterial({ color: 0x222222, emissive: new Color(colors.secondary), emissiveIntensity: 0.1, side: DoubleSide })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        group.add(ring);
+      } else if (type === 1) {
+        const hull = new Mesh(
+          new BoxGeometry(0.8, 0.3, 1.2),
+          new MeshStandardMaterial({ color: 0x333333, emissive: new Color(colors.secondary), emissiveIntensity: 0.05 })
+        );
+        hull.position.y = 0.15;
+        hull.rotation.y = Math.random() * Math.PI;
+        group.add(hull);
+      } else {
+        for (let j = 0; j < 3; j++) {
+          const piece = new Mesh(
+            new BoxGeometry(0.2 + Math.random() * 0.3, 0.1, 0.2 + Math.random() * 0.3),
+            new MeshStandardMaterial({ color: 0x444444 })
+          );
+          piece.position.set((Math.random() - 0.5) * 1, 0.05, (Math.random() - 0.5) * 1);
+          piece.rotation.y = Math.random() * Math.PI;
+          group.add(piece);
+        }
+      }
+      const x = (Math.random() - 0.5) * (FIELD_WIDTH - 2);
+      const z = this.state.playerZ - 10 - Math.random() * 15;
+      group.position.set(x, 0, z);
+      this.world.scene.add(group);
+      this.debrisMeshes.push(group);
+    }
+    this.debrisMeshes = this.debrisMeshes.filter(d => {
+      if (d.position.z > this.state.playerZ + 20) {
+        this.world.scene.remove(d);
+        return false;
+      }
+      return true;
+    });
   }
 
   getAchievements(): Map<string, boolean> { return this.achievements; }
