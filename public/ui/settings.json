@@ -10,99 +10,85 @@
           {
             "type": "container",
             "sourceTag": "div",
-            "children": [
-              "SETTINGS"
-            ],
-            "properties": {
-              "id": "settings-title"
-            },
+            "children": ["SETTINGS"],
+            "properties": { "id": "settings-title" },
             "dataUid": "uid-3"
           },
           {
             "type": "container",
             "sourceTag": "div",
-            "children": [
-              "-- COLOR SCHEME --"
-            ],
-            "properties": {
-              "class": "section-label"
-            },
+            "children": ["-- COLOR SCHEME --"],
+            "properties": { "class": "section-label" },
             "dataUid": "uid-4"
           },
           {
             "type": "container",
             "sourceTag": "div",
             "children": [
-              {
-                "type": "container",
-                "sourceTag": "div",
-                "children": [
-                  "Military"
-                ],
-                "properties": {
-                  "id": "btn-military",
-                  "class": "scheme-btn"
-                },
-                "dataUid": "uid-6"
-              },
-              {
-                "type": "container",
-                "sourceTag": "div",
-                "children": [
-                  "Desert"
-                ],
-                "properties": {
-                  "id": "btn-desert",
-                  "class": "scheme-btn"
-                },
-                "dataUid": "uid-7"
-              },
-              {
-                "type": "container",
-                "sourceTag": "div",
-                "children": [
-                  "Arctic"
-                ],
-                "properties": {
-                  "id": "btn-arctic",
-                  "class": "scheme-btn"
-                },
-                "dataUid": "uid-8"
-              },
-              {
-                "type": "container",
-                "sourceTag": "div",
-                "children": [
-                  "Neon"
-                ],
-                "properties": {
-                  "id": "btn-neon",
-                  "class": "scheme-btn"
-                },
-                "dataUid": "uid-9"
-              }
+              { "type": "container", "sourceTag": "div", "children": ["Military"], "properties": { "id": "btn-military", "class": "scheme-btn" }, "dataUid": "uid-6" },
+              { "type": "container", "sourceTag": "div", "children": ["Desert"], "properties": { "id": "btn-desert", "class": "scheme-btn" }, "dataUid": "uid-7" },
+              { "type": "container", "sourceTag": "div", "children": ["Arctic"], "properties": { "id": "btn-arctic", "class": "scheme-btn" }, "dataUid": "uid-8" },
+              { "type": "container", "sourceTag": "div", "children": ["Neon"], "properties": { "id": "btn-neon", "class": "scheme-btn" }, "dataUid": "uid-9" }
             ],
-            "properties": {
-              "class": "btn-row"
-            },
+            "properties": { "class": "btn-row" },
             "dataUid": "uid-5"
           },
           {
             "type": "container",
             "sourceTag": "div",
+            "children": ["-- AUDIO --"],
+            "properties": { "class": "section-label" },
+            "dataUid": "uid-30"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
             "children": [
-              "Close"
+              { "type": "container", "sourceTag": "div", "children": ["-"], "properties": { "id": "btn-sfx-down", "class": "vol-btn" }, "dataUid": "uid-31" },
+              { "type": "container", "sourceTag": "div", "children": ["SFX: 50%"], "properties": { "id": "sfx-vol-label", "class": "vol-label" }, "dataUid": "uid-32" },
+              { "type": "container", "sourceTag": "div", "children": ["+"], "properties": { "id": "btn-sfx-up", "class": "vol-btn" }, "dataUid": "uid-33" }
             ],
-            "properties": {
-              "id": "btn-close-settings",
-              "class": "close-btn"
-            },
+            "properties": { "class": "vol-row" },
+            "dataUid": "uid-34"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              { "type": "container", "sourceTag": "div", "children": ["-"], "properties": { "id": "btn-music-down", "class": "vol-btn" }, "dataUid": "uid-35" },
+              { "type": "container", "sourceTag": "div", "children": ["Music: 50%"], "properties": { "id": "music-vol-label", "class": "vol-label" }, "dataUid": "uid-36" },
+              { "type": "container", "sourceTag": "div", "children": ["+"], "properties": { "id": "btn-music-up", "class": "vol-btn" }, "dataUid": "uid-37" }
+            ],
+            "properties": { "class": "vol-row" },
+            "dataUid": "uid-38"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": ["-- SCREEN SHAKE --"],
+            "properties": { "class": "section-label" },
+            "dataUid": "uid-40"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              { "type": "container", "sourceTag": "div", "children": ["Off"], "properties": { "id": "btn-shake-off", "class": "scheme-btn" }, "dataUid": "uid-41" },
+              { "type": "container", "sourceTag": "div", "children": ["> Low <"], "properties": { "id": "btn-shake-low", "class": "scheme-btn" }, "dataUid": "uid-42" },
+              { "type": "container", "sourceTag": "div", "children": ["High"], "properties": { "id": "btn-shake-high", "class": "scheme-btn" }, "dataUid": "uid-43" }
+            ],
+            "properties": { "class": "btn-row" },
+            "dataUid": "uid-44"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": ["Close"],
+            "properties": { "id": "btn-close-settings", "class": "close-btn" },
             "dataUid": "uid-10"
           }
         ],
-        "properties": {
-          "id": "root"
-        },
+        "properties": { "id": "root" },
         "dataUid": "uid-2"
       }
     ],
@@ -122,6 +108,37 @@
         "flexDirection": "row",
         "gap": "6",
         "flexWrap": "wrap",
+        "justifyContent": "center"
+      }
+    },
+    "vol-row": {
+      "content": {
+        "flexDirection": "row",
+        "gap": "8",
+        "alignItems": "center",
+        "justifyContent": "center"
+      }
+    },
+    "vol-btn": {
+      "content": {
+        "fontSize": "16",
+        "color": "#00ff88",
+        "backgroundColor": "rgba(0, 255, 136, 0.15)",
+        "padding": "4",
+        "borderRadius": 4,
+        "borderColor": "#00ff88",
+        "borderWidth": "1",
+        "minWidth": "30",
+        "alignItems": "center",
+        "justifyContent": "center"
+      }
+    },
+    "vol-label": {
+      "content": {
+        "fontSize": "13",
+        "color": "#00ff88",
+        "minWidth": "90",
+        "alignItems": "center",
         "justifyContent": "center"
       }
     },
@@ -173,166 +190,5 @@
       }
     }
   },
-  "ranges": {
-    "uid-1": {
-      "start": {
-        "line": 0,
-        "column": 0
-      },
-      "end": {
-        "line": 64,
-        "column": 8
-      }
-    },
-    "section-label": {
-      "start": {
-        "line": 16,
-        "column": 4
-      },
-      "end": {
-        "line": 16,
-        "column": 18
-      }
-    },
-    "btn-row": {
-      "start": {
-        "line": 21,
-        "column": 4
-      },
-      "end": {
-        "line": 21,
-        "column": 12
-      }
-    },
-    "scheme-btn": {
-      "start": {
-        "line": 27,
-        "column": 4
-      },
-      "end": {
-        "line": 27,
-        "column": 15
-      }
-    },
-    "close-btn": {
-      "start": {
-        "line": 39,
-        "column": 4
-      },
-      "end": {
-        "line": 39,
-        "column": 14
-      }
-    },
-    "__id__root": {
-      "start": {
-        "line": 2,
-        "column": 4
-      },
-      "end": {
-        "line": 2,
-        "column": 9
-      }
-    },
-    "__id__settings-title": {
-      "start": {
-        "line": 12,
-        "column": 4
-      },
-      "end": {
-        "line": 12,
-        "column": 19
-      }
-    },
-    "uid-2": {
-      "start": {
-        "line": 53,
-        "column": 2
-      },
-      "end": {
-        "line": 63,
-        "column": 8
-      }
-    },
-    "uid-3": {
-      "start": {
-        "line": 54,
-        "column": 4
-      },
-      "end": {
-        "line": 54,
-        "column": 43
-      }
-    },
-    "uid-4": {
-      "start": {
-        "line": 55,
-        "column": 4
-      },
-      "end": {
-        "line": 55,
-        "column": 55
-      }
-    },
-    "uid-5": {
-      "start": {
-        "line": 56,
-        "column": 4
-      },
-      "end": {
-        "line": 61,
-        "column": 10
-      }
-    },
-    "uid-6": {
-      "start": {
-        "line": 57,
-        "column": 6
-      },
-      "end": {
-        "line": 57,
-        "column": 62
-      }
-    },
-    "uid-7": {
-      "start": {
-        "line": 58,
-        "column": 6
-      },
-      "end": {
-        "line": 58,
-        "column": 58
-      }
-    },
-    "uid-8": {
-      "start": {
-        "line": 59,
-        "column": 6
-      },
-      "end": {
-        "line": 59,
-        "column": 58
-      }
-    },
-    "uid-9": {
-      "start": {
-        "line": 60,
-        "column": 6
-      },
-      "end": {
-        "line": 60,
-        "column": 54
-      }
-    },
-    "uid-10": {
-      "start": {
-        "line": 62,
-        "column": 4
-      },
-      "end": {
-        "line": 62,
-        "column": 62
-      }
-    }
-  }
+  "ranges": {}
 }

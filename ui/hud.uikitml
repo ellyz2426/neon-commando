@@ -44,6 +44,22 @@
       font-size: 12;
       color: #ffaa00;
     }
+    #hud-upgrade {
+      font-size: 12;
+      color: #00ff44;
+    }
+    #hud-bonus {
+      font-size: 11;
+      color: #ffcc00;
+    }
+    #hud-revenge {
+      font-size: 14;
+      color: #ff6600;
+    }
+    #hud-multikill {
+      font-size: 16;
+      color: #ff00ff;
+    }
     .left-group {
       flex-direction: row;
       gap: 12;
@@ -111,8 +127,12 @@
         <div id="hud-weapon"></div>
         <div id="hud-shield"></div>
         <div id="hud-streak"></div>
+        <div id="hud-upgrade"></div>
+        <div id="hud-revenge"></div>
+        <div id="hud-multikill"></div>
         <div id="hud-timer"></div>
         <div id="hud-achievement"></div>
+        <div id="hud-bonus"></div>
       </div>
       <div class="right-group">
         <div id="hud-lives" class="hud-item">Lives: 3</div>

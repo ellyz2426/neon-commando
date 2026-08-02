@@ -217,6 +217,18 @@
                   "class": "nav-btn"
                 },
                 "dataUid": "uid-21"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  "Scores"
+                ],
+                "properties": {
+                  "id": "btn-leaderboard",
+                  "class": "nav-btn"
+                },
+                "dataUid": "uid-23"
               }
             ],
             "properties": {

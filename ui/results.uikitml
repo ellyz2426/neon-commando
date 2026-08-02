@@ -60,6 +60,11 @@
       <div id="results-kills" class="results-row">Enemies Killed: 0</div>
       <div id="results-combo" class="results-row">Best Combo: 0x</div>
       <div id="results-time" class="results-row">Time: 0:00</div>
+      <div id="results-rating" class="results-row"></div>
+      <div id="results-missions" class="results-row"></div>
+      <div id="results-achievements" class="results-row"></div>
+      <div id="results-bonus" class="results-row"></div>
+      <div id="results-multikill" class="results-row"></div>
     </div>
     <div class="btn-row">
       <div id="btn-retry" class="results-btn">Retry</div>

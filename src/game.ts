@@ -251,6 +251,22 @@ interface MortarZone {
   impactPending: boolean;
 }
 
+interface UpgradeToken {
+  mesh: Group;
+  x: number;
+  z: number;
+  bobTimer: number;
+}
+
+interface BonusObjective {
+  type: string;
+  description: string;
+  target: number;
+  progress: number;
+  timeLeft: number;
+  bonusScore: number;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -346,6 +362,8 @@ export interface GameState {
   // Settings (persisted)
   sfxMuted: boolean;
   musicMuted: boolean;
+  sfxVolume: number; // 0-100
+  musicVolume: number; // 0-100
   shakeIntensity: number; // 0=off 1=low 2=high
   // Dodge roll
   rollTimer: number;
@@ -355,6 +373,17 @@ export interface GameState {
   // Smoke grenades
   smokeGrenadeCount: number;
   currentBiome: number;
+  // Weapon upgrade
+  weaponUpgradeLevel: number;
+  // Revenge surge
+  revengeSurgeTimer: number;
+  // Bonus objective
+  bonusObjective: BonusObjective | null;
+  bonusObjectivesCompleted: number;
+  // Multi-kill tracking
+  multiKillTimer: number;
+  multiKillCount: number;
+  multiKillBest: number;
 }
 
 // ── Constants ──
@@ -424,6 +453,7 @@ export class GameSystem extends createSystem({}) {
   private electricFences: ElectricFence[] = [];
   private mortarZones: MortarZone[] = [];
   private smokeClouds: Array<{ meshes: Mesh[]; x: number; z: number; timer: number; maxTime: number; radius: number }> = [];
+  private upgradeTokens: UpgradeToken[] = [];
   private nextEnemyId = 0;
 
   init() {
@@ -516,6 +546,8 @@ export class GameSystem extends createSystem({}) {
       runAchievementsEarned: 0,
       sfxMuted: false,
       musicMuted: false,
+      sfxVolume: 50,
+      musicVolume: 50,
       shakeIntensity: 1,
       rollTimer: 0,
       rollCooldown: 0,
@@ -523,6 +555,13 @@ export class GameSystem extends createSystem({}) {
       rollDirZ: 0,
       smokeGrenadeCount: 2,
       currentBiome: 0,
+      weaponUpgradeLevel: 0,
+      revengeSurgeTimer: 0,
+      bonusObjective: null,
+      bonusObjectivesCompleted: 0,
+      multiKillTimer: 0,
+      multiKillCount: 0,
+      multiKillBest: 0,
     };
   }
 
@@ -552,6 +591,8 @@ export class GameSystem extends createSystem({}) {
         const st = JSON.parse(settings);
         this.state.sfxMuted = !!st.sfxMuted;
         this.state.musicMuted = !!st.musicMuted;
+        this.state.sfxVolume = typeof st.sfxVolume === 'number' ? st.sfxVolume : 50;
+        this.state.musicVolume = typeof st.musicVolume === 'number' ? st.musicVolume : 50;
         this.state.shakeIntensity = typeof st.shakeIntensity === 'number' ? st.shakeIntensity : 1;
       }
     } catch {}
@@ -594,6 +635,8 @@ export class GameSystem extends createSystem({}) {
       localStorage.setItem('neon-commando-settings', JSON.stringify({
         sfxMuted: this.state.sfxMuted,
         musicMuted: this.state.musicMuted,
+        sfxVolume: this.state.sfxVolume,
+        musicVolume: this.state.musicVolume,
         shakeIntensity: this.state.shakeIntensity,
       }));
     } catch {}
@@ -1093,7 +1136,7 @@ export class GameSystem extends createSystem({}) {
       group.add(ring);
     }
 
-    return {
+    const enemy = {
       id: this.nextEnemyId++,
       mesh: group,
       type,
@@ -1111,6 +1154,8 @@ export class GameSystem extends createSystem({}) {
       deathTimer: 0,
       flashTimer: 0,
     };
+    (enemy as any).isElite = isElite;
+    return enemy;
   }
 
   // ── Bullet Creation ──
@@ -1252,6 +1297,157 @@ export class GameSystem extends createSystem({}) {
       if (cloud.timer <= 0) {
         for (const m of cloud.meshes) this.world.scene.remove(m);
         this.smokeClouds.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Upgrade Token System ──
+  private spawnUpgradeToken(x: number, z: number) {
+    const group = new Group();
+    // Green rotating diamond
+    const diamondGeo = new BoxGeometry(0.25, 0.35, 0.25);
+    const diamondMat = new MeshBasicMaterial({ color: 0x00ff44, transparent: true, opacity: 0.85 });
+    const diamond = new Mesh(diamondGeo, diamondMat);
+    diamond.rotation.set(Math.PI / 4, 0, Math.PI / 4);
+    group.add(diamond);
+    // Glow ring
+    const ringGeo = new RingGeometry(0.2, 0.35, 8);
+    const ringMat = new MeshBasicMaterial({ color: 0x44ff88, transparent: true, opacity: 0.5, side: DoubleSide });
+    const ring = new Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -0.1;
+    group.add(ring);
+    group.position.set(x, 0.8, z);
+    this.world.scene.add(group);
+    this.upgradeTokens.push({ mesh: group, x, z, bobTimer: Math.random() * Math.PI * 2 });
+  }
+
+  private updateUpgradeTokens(dt: number) {
+    const s = this.state;
+    for (let i = this.upgradeTokens.length - 1; i >= 0; i--) {
+      const t = this.upgradeTokens[i];
+      t.bobTimer += dt * 3;
+      t.mesh.position.y = 0.8 + Math.sin(t.bobTimer) * 0.15;
+      t.mesh.rotation.y += dt * 2;
+      // Collect on proximity
+      const dx = s.playerX - t.x;
+      const dz = s.playerZ - t.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 1.0) {
+        if (s.weaponUpgradeLevel < 3) {
+          s.weaponUpgradeLevel++;
+          this.spawnScorePopup(t.x, t.z, 0, 0);
+          // Green particles on pickup
+          for (let p = 0; p < 6; p++) {
+            this.spawnParticle(t.x, 0.8, t.z, '#00ff44');
+          }
+          (this as any).audioSystem?.playPowerUp();
+        }
+        this.world.scene.remove(t.mesh);
+        this.upgradeTokens.splice(i, 1);
+        continue;
+      }
+      // Remove if scrolled off
+      if (t.z - s.scrollZ > 20) {
+        this.world.scene.remove(t.mesh);
+        this.upgradeTokens.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Bonus Objective System ──
+  private assignBonusObjective() {
+    const s = this.state;
+    if (s.bonusObjective) return; // already active
+    if (Math.random() > 0.35) return; // 35% chance per wave
+    const wave = s.wave;
+    const types = ['speedKill', 'noDamage', 'comboKing'];
+    const pick = types[Math.floor(Math.random() * types.length)];
+    let obj: BonusObjective;
+    switch (pick) {
+      case 'speedKill':
+        obj = { type: 'speedKill', description: `Kill ${3 + wave} enemies in 15s`, target: 3 + wave, progress: 0, timeLeft: 15, bonusScore: 500 + wave * 50 };
+        break;
+      case 'noDamage':
+        obj = { type: 'noDamage', description: 'Survive wave without damage', target: 1, progress: 0, timeLeft: 999, bonusScore: 800 + wave * 75 };
+        break;
+      case 'comboKing':
+        const comboTarget = Math.min(5 + Math.floor(wave / 2), 20);
+        obj = { type: 'comboKing', description: `Reach ${comboTarget}x combo`, target: comboTarget, progress: 0, timeLeft: 20, bonusScore: 600 + wave * 60 };
+        break;
+      default:
+        return;
+    }
+    s.bonusObjective = obj;
+  }
+
+  private updateBonusObjective(dt: number) {
+    const s = this.state;
+    if (!s.bonusObjective) return;
+    const bo = s.bonusObjective;
+    if (bo.progress < 0) { // failed (noDamage hit)
+      s.bonusObjective = null;
+      return;
+    }
+    bo.timeLeft -= dt;
+    // noDamage: complete when wave ends (checked in wave logic)
+    if (bo.type !== 'noDamage' && bo.progress >= bo.target) {
+      // Completed!
+      s.score += bo.bonusScore;
+      s.bonusObjectivesCompleted++;
+      this.spawnScorePopup(s.playerX, s.playerZ - 1.5, bo.bonusScore, 0);
+      s.bonusObjective = null;
+      return;
+    }
+    if (bo.timeLeft <= 0 && bo.type !== 'noDamage') {
+      s.bonusObjective = null; // expired
+    }
+  }
+
+  private completeBonusNoDamage() {
+    const s = this.state;
+    if (!s.bonusObjective || s.bonusObjective.type !== 'noDamage') return;
+    if (s.bonusObjective.progress >= 0) {
+      s.score += s.bonusObjective.bonusScore;
+      s.bonusObjectivesCompleted++;
+      this.spawnScorePopup(s.playerX, s.playerZ - 1.5, s.bonusObjective.bonusScore, 0);
+    }
+    s.bonusObjective = null;
+  }
+
+  // ── Multi-kill Tracker ──
+  private updateMultiKill(dt: number) {
+    const s = this.state;
+    if (s.multiKillTimer > 0) {
+      s.multiKillTimer -= dt;
+      if (s.multiKillTimer <= 0) {
+        s.multiKillCount = 0;
+      }
+    }
+  }
+
+  // ── Revenge Surge ──
+  private updateRevengeSurge(dt: number) {
+    const s = this.state;
+    if (s.revengeSurgeTimer > 0) {
+      s.revengeSurgeTimer -= dt;
+      // Visual pulse on player mesh
+      if (this.playerGroup) {
+        const pulse = Math.sin(s.revengeSurgeTimer * 12) * 0.5 + 0.5;
+        this.playerGroup.traverse((child: any) => {
+          if (child.material && child.material.emissive) {
+            child.material.emissiveIntensity = 0.3 + pulse * 0.7;
+          }
+        });
+      }
+      if (s.revengeSurgeTimer <= 0) {
+        // Reset player emissive
+        if (this.playerGroup) {
+          this.playerGroup.traverse((child: any) => {
+            if (child.material && child.material.emissive) {
+              child.material.emissiveIntensity = 0.3;
+            }
+          });
+        }
       }
     }
   }
@@ -1430,8 +1626,22 @@ export class GameSystem extends createSystem({}) {
 
   // ── Enemy Damage ──
   private damageEnemy(enemy: Enemy, damage: number) {
+    // Critical hit check (10% chance, 3x damage)
+    let isCrit = false;
+    if (Math.random() < 0.1) {
+      isCrit = true;
+      damage = Math.floor(damage * 3);
+    }
+    // Weapon upgrade damage boost (25% per level)
+    if (this.state.weaponUpgradeLevel > 0) {
+      damage = Math.floor(damage * (1 + this.state.weaponUpgradeLevel * 0.25));
+    }
+    // Revenge surge damage boost
+    if (this.state.revengeSurgeTimer > 0) {
+      damage = Math.floor(damage * 2);
+    }
     enemy.hp -= damage;
-    enemy.flashTimer = 0.1;
+    enemy.flashTimer = isCrit ? 0.25 : 0.1;
 
     if (enemy.hp <= 0) {
       this.killEnemyEnhanced(enemy);
@@ -1460,6 +1670,42 @@ export class GameSystem extends createSystem({}) {
 
       // Score popup
       this.spawnScorePopup(enemy.x, enemy.z, earnedPoints, this.state.combo);
+
+      // Crit popup (extra golden popup above)
+      if (isCrit) {
+        this.spawnScorePopup(enemy.x, enemy.z + 0.5, 0, 0); // placeholder — overridden below
+        // Spawn extra crit particles
+        for (let ci = 0; ci < 4; ci++) {
+          this.spawnParticle(enemy.x, 1.0, enemy.z, '#ffff00', 1.2);
+        }
+      }
+
+      // Multi-kill tracking (kills within 1 second window)
+      this.state.multiKillCount++;
+      this.state.multiKillTimer = 1.0;
+      if (this.state.multiKillCount >= 3) {
+        const multiBonus = this.state.multiKillCount * 100;
+        this.state.score += multiBonus;
+        this.spawnScorePopup(this.state.playerX, this.state.playerZ - 1, multiBonus, this.state.multiKillCount);
+        if (this.state.multiKillCount > this.state.multiKillBest) {
+          this.state.multiKillBest = this.state.multiKillCount;
+        }
+      }
+
+      // Bonus objective progress: kill-based
+      if (this.state.bonusObjective && this.state.bonusObjective.timeLeft > 0) {
+        const bo = this.state.bonusObjective;
+        if (bo.type === 'speedKill') {
+          bo.progress++;
+        } else if (bo.type === 'comboKing' && this.state.combo >= bo.target) {
+          bo.progress = bo.target;
+        }
+      }
+
+      // Elite enemies drop upgrade tokens (50% chance)
+      if ((enemy as any).isElite && Math.random() < 0.5) {
+        this.spawnUpgradeToken(enemy.x, enemy.z);
+      }
 
       // Drop power-up chance
       if (Math.random() < 0.2) {
@@ -1510,6 +1756,16 @@ export class GameSystem extends createSystem({}) {
     this.state.killStreakShieldActive = false;
     this.state.screenShake = 0.4;
     this.state.damageFlashTimer = 0.3;
+    // Reset weapon upgrades on death
+    this.state.weaponUpgradeLevel = 0;
+    // Activate revenge surge if still alive
+    if (this.state.lives > 0) {
+      this.state.revengeSurgeTimer = 3.0;
+    }
+    // Bonus objective: noDamage fails
+    if (this.state.bonusObjective && this.state.bonusObjective.type === 'noDamage') {
+      this.state.bonusObjective.progress = -1; // mark failed
+    }
 
     const colors = this.getColors();
     for (let i = 0; i < 12; i++) {
@@ -2043,6 +2299,8 @@ export class GameSystem extends createSystem({}) {
     this.scorePopups = [];
     for (const d of this.debrisMeshes) this.world.scene.remove(d);
     this.debrisMeshes = [];
+    for (const ut of this.upgradeTokens) this.world.scene.remove(ut.mesh);
+    this.upgradeTokens = [];
   }
 
   // ── Vehicle System ──
@@ -2821,6 +3079,10 @@ export class GameSystem extends createSystem({}) {
       this.updateElectricFences(dt);
       this.updateMortarZones(dt);
       this.updateSmokeClouds(dt);
+      this.updateUpgradeTokens(dt);
+      this.updateBonusObjective(dt);
+      this.updateMultiKill(dt);
+      this.updateRevengeSurge(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -2927,7 +3189,8 @@ export class GameSystem extends createSystem({}) {
 
     // Movement — dodge roll overrides normal movement
     const vehicleSpeedMult = s.inVehicle ? 1.6 : 1;
-    const speed = (s.speedBoostTimer > 0 ? s.playerSpeed * 1.5 : s.playerSpeed) * vehicleSpeedMult;
+    const revengeSpeedMult = s.revengeSurgeTimer > 0 ? 1.5 : 1;
+    const speed = (s.speedBoostTimer > 0 ? s.playerSpeed * 1.5 : s.playerSpeed) * vehicleSpeedMult * revengeSpeedMult;
     if (s.rollTimer > 0) {
       s.rollTimer -= dt;
       const rollSpeed = s.playerSpeed * 3;
@@ -3515,6 +3778,8 @@ export class GameSystem extends createSystem({}) {
 
     // Wave complete check
     if (s.waveEnemiesLeft <= 0 && this.enemies.filter(e => !e.dead).length === 0) {
+      // Complete noDamage bonus objective at wave end
+      this.completeBonusNoDamage();
       s.wave++;
       s.scrollSpeed = Math.min(5, 3 + s.wave * 0.15);
 
@@ -3523,6 +3788,9 @@ export class GameSystem extends createSystem({}) {
         s.currentBiome = (s.currentBiome + 1) % BIOME_THEMES.length;
         this.applyBiomeTransition(s.currentBiome);
       }
+
+      // Assign bonus objective for new wave
+      this.assignBonusObjective();
 
       this.startWave();
     }

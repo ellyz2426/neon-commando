@@ -99,7 +99,7 @@
                     "sourceTag": "div",
                     "children": [],
                     "properties": {
-                      "id": "hud-timer"
+                      "id": "hud-upgrade"
                     },
                     "dataUid": "uid-13"
                   },
@@ -108,9 +108,45 @@
                     "sourceTag": "div",
                     "children": [],
                     "properties": {
-                      "id": "hud-achievement"
+                      "id": "hud-revenge"
                     },
                     "dataUid": "uid-14"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-multikill"
+                    },
+                    "dataUid": "uid-15"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-timer"
+                    },
+                    "dataUid": "uid-16"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-achievement"
+                    },
+                    "dataUid": "uid-17"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-bonus"
+                    },
+                    "dataUid": "uid-18"
                   }
                 ],
                 "properties": {
@@ -132,7 +168,7 @@
                       "id": "hud-lives",
                       "class": "hud-item"
                     },
-                    "dataUid": "uid-16"
+                    "dataUid": "uid-20"
                   },
                   {
                     "type": "container",
@@ -144,13 +180,13 @@
                       "id": "hud-grenades",
                       "class": "hud-item"
                     },
-                    "dataUid": "uid-17"
+                    "dataUid": "uid-21"
                   }
                 ],
                 "properties": {
                   "class": "right-group"
                 },
-                "dataUid": "uid-15"
+                "dataUid": "uid-19"
               }
             ],
             "properties": {
@@ -171,7 +207,7 @@
                 "properties": {
                   "id": "hud-progress-label"
                 },
-                "dataUid": "uid-19"
+                "dataUid": "uid-23"
               },
               {
                 "type": "container",
@@ -184,20 +220,20 @@
                     "properties": {
                       "id": "hud-progress-fill"
                     },
-                    "dataUid": "uid-21"
+                    "dataUid": "uid-25"
                   }
                 ],
                 "properties": {
                   "class": "bar-bg"
                 },
-                "dataUid": "uid-20"
+                "dataUid": "uid-24"
               }
             ],
             "properties": {
               "class": "progress-row",
               "id": "hud-wave-progress"
             },
-            "dataUid": "uid-18"
+            "dataUid": "uid-22"
           },
           {
             "type": "container",
@@ -212,7 +248,7 @@
                 "properties": {
                   "id": "hud-boss-label"
                 },
-                "dataUid": "uid-23"
+                "dataUid": "uid-27"
               },
               {
                 "type": "container",
@@ -225,20 +261,20 @@
                     "properties": {
                       "id": "hud-boss-fill"
                     },
-                    "dataUid": "uid-25"
+                    "dataUid": "uid-29"
                   }
                 ],
                 "properties": {
                   "class": "boss-bar-bg"
                 },
-                "dataUid": "uid-24"
+                "dataUid": "uid-28"
               }
             ],
             "properties": {
               "class": "progress-row",
               "id": "hud-boss-progress"
             },
-            "dataUid": "uid-22"
+            "dataUid": "uid-26"
           }
         ],
         "properties": {
@@ -357,6 +393,30 @@
         "color": "#ffaa00"
       }
     },
+    "__id__hud-upgrade": {
+      "content": {
+        "fontSize": "12",
+        "color": "#00ff44"
+      }
+    },
+    "__id__hud-bonus": {
+      "content": {
+        "fontSize": "11",
+        "color": "#ffcc00"
+      }
+    },
+    "__id__hud-revenge": {
+      "content": {
+        "fontSize": "14",
+        "color": "#ff6600"
+      }
+    },
+    "__id__hud-multikill": {
+      "content": {
+        "fontSize": "16",
+        "color": "#ff00ff"
+      }
+    },
     "__id__hud-wave-announce": {
       "content": {
         "fontSize": "20",
@@ -397,7 +457,7 @@
         "column": 0
       },
       "end": {
-        "line": 130,
+        "line": 150,
         "column": 8
       }
     },
@@ -423,61 +483,61 @@
     },
     "left-group": {
       "start": {
-        "line": 46,
+        "line": 62,
         "column": 4
       },
       "end": {
-        "line": 46,
+        "line": 62,
         "column": 15
       }
     },
     "right-group": {
       "start": {
-        "line": 51,
+        "line": 67,
         "column": 4
       },
       "end": {
-        "line": 51,
+        "line": 67,
         "column": 16
       }
     },
     "center-group": {
       "start": {
-        "line": 56,
+        "line": 72,
         "column": 4
       },
       "end": {
-        "line": 56,
+        "line": 72,
         "column": 17
       }
     },
     "progress-row": {
       "start": {
-        "line": 65,
+        "line": 81,
         "column": 4
       },
       "end": {
-        "line": 65,
+        "line": 81,
         "column": 17
       }
     },
     "bar-bg": {
       "start": {
-        "line": 74,
+        "line": 90,
         "column": 4
       },
       "end": {
-        "line": 74,
+        "line": 90,
         "column": 11
       }
     },
     "boss-bar-bg": {
       "start": {
-        "line": 89,
+        "line": 105,
         "column": 4
       },
       "end": {
-        "line": 89,
+        "line": 105,
         "column": 16
       }
     },
@@ -551,293 +611,373 @@
         "column": 20
       }
     },
-    "__id__hud-wave-announce": {
+    "__id__hud-upgrade": {
       "start": {
-        "line": 61,
+        "line": 46,
         "column": 4
       },
       "end": {
-        "line": 61,
+        "line": 46,
+        "column": 16
+      }
+    },
+    "__id__hud-bonus": {
+      "start": {
+        "line": 50,
+        "column": 4
+      },
+      "end": {
+        "line": 50,
+        "column": 14
+      }
+    },
+    "__id__hud-revenge": {
+      "start": {
+        "line": 54,
+        "column": 4
+      },
+      "end": {
+        "line": 54,
+        "column": 16
+      }
+    },
+    "__id__hud-multikill": {
+      "start": {
+        "line": 58,
+        "column": 4
+      },
+      "end": {
+        "line": 58,
+        "column": 18
+      }
+    },
+    "__id__hud-wave-announce": {
+      "start": {
+        "line": 77,
+        "column": 4
+      },
+      "end": {
+        "line": 77,
         "column": 22
       }
     },
     "__id__hud-progress-label": {
       "start": {
-        "line": 70,
+        "line": 86,
         "column": 4
       },
       "end": {
-        "line": 70,
+        "line": 86,
         "column": 23
       }
     },
     "__id__hud-progress-fill": {
       "start": {
-        "line": 80,
+        "line": 96,
         "column": 4
       },
       "end": {
-        "line": 80,
+        "line": 96,
         "column": 22
       }
     },
     "__id__hud-boss-label": {
       "start": {
-        "line": 85,
+        "line": 101,
         "column": 4
       },
       "end": {
-        "line": 85,
+        "line": 101,
         "column": 19
       }
     },
     "__id__hud-boss-fill": {
       "start": {
-        "line": 95,
+        "line": 111,
         "column": 4
       },
       "end": {
-        "line": 95,
+        "line": 111,
         "column": 18
       }
     },
     "uid-2": {
       "start": {
-        "line": 101,
+        "line": 117,
         "column": 2
       },
       "end": {
-        "line": 129,
+        "line": 149,
         "column": 8
       }
     },
     "uid-3": {
       "start": {
-        "line": 102,
+        "line": 118,
         "column": 4
       },
       "end": {
-        "line": 102,
+        "line": 118,
         "column": 38
       }
     },
     "uid-4": {
       "start": {
-        "line": 103,
+        "line": 119,
         "column": 4
       },
       "end": {
-        "line": 120,
+        "line": 140,
         "column": 10
       }
     },
     "uid-5": {
       "start": {
-        "line": 104,
+        "line": 120,
         "column": 6
       },
       "end": {
-        "line": 107,
+        "line": 123,
         "column": 12
       }
     },
     "uid-6": {
       "start": {
-        "line": 105,
+        "line": 121,
         "column": 8
       },
       "end": {
-        "line": 105,
+        "line": 121,
         "column": 59
       }
     },
     "uid-7": {
       "start": {
-        "line": 106,
+        "line": 122,
         "column": 8
       },
       "end": {
-        "line": 106,
+        "line": 122,
         "column": 56
       }
     },
     "uid-8": {
       "start": {
-        "line": 108,
+        "line": 124,
         "column": 6
       },
       "end": {
-        "line": 115,
+        "line": 135,
         "column": 12
       }
     },
     "uid-9": {
       "start": {
-        "line": 109,
+        "line": 125,
         "column": 8
       },
       "end": {
-        "line": 109,
+        "line": 125,
         "column": 34
       }
     },
     "uid-10": {
       "start": {
-        "line": 110,
+        "line": 126,
         "column": 8
       },
       "end": {
-        "line": 110,
+        "line": 126,
         "column": 35
       }
     },
     "uid-11": {
       "start": {
-        "line": 111,
+        "line": 127,
         "column": 8
       },
       "end": {
-        "line": 111,
+        "line": 127,
         "column": 35
       }
     },
     "uid-12": {
       "start": {
-        "line": 112,
+        "line": 128,
         "column": 8
       },
       "end": {
-        "line": 112,
+        "line": 128,
         "column": 35
       }
     },
     "uid-13": {
       "start": {
-        "line": 113,
+        "line": 129,
         "column": 8
       },
       "end": {
-        "line": 113,
-        "column": 34
+        "line": 129,
+        "column": 36
       }
     },
     "uid-14": {
       "start": {
-        "line": 114,
+        "line": 130,
         "column": 8
       },
       "end": {
-        "line": 114,
-        "column": 40
+        "line": 130,
+        "column": 36
       }
     },
     "uid-15": {
       "start": {
-        "line": 116,
-        "column": 6
+        "line": 131,
+        "column": 8
       },
       "end": {
-        "line": 119,
-        "column": 12
+        "line": 131,
+        "column": 38
       }
     },
     "uid-16": {
       "start": {
-        "line": 117,
+        "line": 132,
         "column": 8
       },
       "end": {
-        "line": 117,
-        "column": 59
+        "line": 132,
+        "column": 34
       }
     },
     "uid-17": {
       "start": {
-        "line": 118,
+        "line": 133,
         "column": 8
       },
       "end": {
-        "line": 118,
-        "column": 58
+        "line": 133,
+        "column": 40
       }
     },
     "uid-18": {
       "start": {
-        "line": 121,
-        "column": 4
+        "line": 134,
+        "column": 8
       },
       "end": {
-        "line": 124,
-        "column": 10
+        "line": 134,
+        "column": 34
       }
     },
     "uid-19": {
       "start": {
-        "line": 122,
+        "line": 136,
         "column": 6
       },
       "end": {
-        "line": 122,
-        "column": 48
+        "line": 139,
+        "column": 12
       }
     },
     "uid-20": {
       "start": {
-        "line": 123,
-        "column": 6
+        "line": 137,
+        "column": 8
       },
       "end": {
-        "line": 123,
-        "column": 66
+        "line": 137,
+        "column": 59
       }
     },
     "uid-21": {
       "start": {
-        "line": 123,
-        "column": 26
+        "line": 138,
+        "column": 8
       },
       "end": {
-        "line": 123,
-        "column": 60
+        "line": 138,
+        "column": 58
       }
     },
     "uid-22": {
       "start": {
-        "line": 125,
+        "line": 141,
         "column": 4
       },
       "end": {
-        "line": 128,
+        "line": 144,
         "column": 10
       }
     },
     "uid-23": {
       "start": {
-        "line": 126,
+        "line": 142,
         "column": 6
       },
       "end": {
-        "line": 126,
-        "column": 41
+        "line": 142,
+        "column": 48
       }
     },
     "uid-24": {
       "start": {
-        "line": 127,
+        "line": 143,
         "column": 6
       },
       "end": {
-        "line": 127,
-        "column": 67
+        "line": 143,
+        "column": 66
       }
     },
     "uid-25": {
       "start": {
-        "line": 127,
+        "line": 143,
+        "column": 26
+      },
+      "end": {
+        "line": 143,
+        "column": 60
+      }
+    },
+    "uid-26": {
+      "start": {
+        "line": 145,
+        "column": 4
+      },
+      "end": {
+        "line": 148,
+        "column": 10
+      }
+    },
+    "uid-27": {
+      "start": {
+        "line": 146,
+        "column": 6
+      },
+      "end": {
+        "line": 146,
+        "column": 41
+      }
+    },
+    "uid-28": {
+      "start": {
+        "line": 147,
+        "column": 6
+      },
+      "end": {
+        "line": 147,
+        "column": 67
+      }
+    },
+    "uid-29": {
+      "start": {
+        "line": 147,
         "column": 31
       },
       "end": {
-        "line": 127,
+        "line": 147,
         "column": 61
       }
     }

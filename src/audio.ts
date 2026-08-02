@@ -353,6 +353,14 @@ export class AudioSystem extends createSystem({}) {
     if (this.musicGain) this.musicGain.gain.value = muted ? 0 : 0.15;
   }
 
+  setSfxVolume(vol: number) {
+    if (this.sfxGain) this.sfxGain.gain.value = vol / 100;
+  }
+
+  setMusicVolume(vol: number) {
+    if (this.musicGain) this.musicGain.gain.value = vol / 100 * 0.3;
+  }
+
   update() {
     // Keep audio context alive
     if (this.ctx && this.ctx.state === 'suspended') {

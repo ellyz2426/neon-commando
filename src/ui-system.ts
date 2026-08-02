@@ -296,25 +296,43 @@ export class UISystem extends createSystem({
         });
       });
 
-      // SFX toggle
-      const sfxBtn = doc.getElementById('btn-sfx-toggle') as UIKit.Text | undefined;
-      sfxBtn?.addEventListener('click', () => {
+      // SFX volume +/-
+      const sfxDown = doc.getElementById('btn-sfx-down') as UIKit.Text | undefined;
+      sfxDown?.addEventListener('click', () => {
         this.audioSystem.playMenuSelect();
         const s = this.gameSystem.getState();
-        s.sfxMuted = !s.sfxMuted;
-        this.audioSystem.setSfxMuted(s.sfxMuted);
-        setText(doc, 'btn-sfx-toggle', s.sfxMuted ? 'SFX: OFF' : 'SFX: ON');
+        s.sfxVolume = Math.max(0, s.sfxVolume - 10);
+        this.audioSystem.setSfxVolume(s.sfxVolume);
+        setText(doc, 'sfx-vol-label', `SFX: ${s.sfxVolume}%`);
+        this.gameSystem.saveSettings();
+      });
+      const sfxUp = doc.getElementById('btn-sfx-up') as UIKit.Text | undefined;
+      sfxUp?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        const s = this.gameSystem.getState();
+        s.sfxVolume = Math.min(100, s.sfxVolume + 10);
+        this.audioSystem.setSfxVolume(s.sfxVolume);
+        setText(doc, 'sfx-vol-label', `SFX: ${s.sfxVolume}%`);
         this.gameSystem.saveSettings();
       });
 
-      // Music toggle
-      const musicBtn = doc.getElementById('btn-music-toggle') as UIKit.Text | undefined;
-      musicBtn?.addEventListener('click', () => {
+      // Music volume +/-
+      const musicDown = doc.getElementById('btn-music-down') as UIKit.Text | undefined;
+      musicDown?.addEventListener('click', () => {
         this.audioSystem.playMenuSelect();
         const s = this.gameSystem.getState();
-        s.musicMuted = !s.musicMuted;
-        this.audioSystem.setMusicMuted(s.musicMuted);
-        setText(doc, 'btn-music-toggle', s.musicMuted ? 'Music: OFF' : 'Music: ON');
+        s.musicVolume = Math.max(0, s.musicVolume - 10);
+        this.audioSystem.setMusicVolume(s.musicVolume);
+        setText(doc, 'music-vol-label', `Music: ${s.musicVolume}%`);
+        this.gameSystem.saveSettings();
+      });
+      const musicUp = doc.getElementById('btn-music-up') as UIKit.Text | undefined;
+      musicUp?.addEventListener('click', () => {
+        this.audioSystem.playMenuSelect();
+        const s = this.gameSystem.getState();
+        s.musicVolume = Math.min(100, s.musicVolume + 10);
+        this.audioSystem.setMusicVolume(s.musicVolume);
+        setText(doc, 'music-vol-label', `Music: ${s.musicVolume}%`);
         this.gameSystem.saveSettings();
       });
 
@@ -339,10 +357,10 @@ export class UISystem extends createSystem({
 
       // Init display state
       const s = this.gameSystem.getState();
-      setText(doc, 'btn-sfx-toggle', s.sfxMuted ? 'SFX: OFF' : 'SFX: ON');
-      setText(doc, 'btn-music-toggle', s.musicMuted ? 'Music: OFF' : 'Music: ON');
-      this.audioSystem.setSfxMuted(s.sfxMuted);
-      this.audioSystem.setMusicMuted(s.musicMuted);
+      setText(doc, 'sfx-vol-label', `SFX: ${s.sfxVolume}%`);
+      setText(doc, 'music-vol-label', `Music: ${s.musicVolume}%`);
+      this.audioSystem.setSfxVolume(s.sfxVolume);
+      this.audioSystem.setMusicVolume(s.musicVolume);
       this.updateShakeHighlights(doc);
     });
 
@@ -662,6 +680,40 @@ export class UISystem extends createSystem({
         setText(this.hudDoc, 'hud-achievement', '');
       }
     }
+
+    // Weapon upgrade level
+    if (s.weaponUpgradeLevel > 0) {
+      const stars = '★'.repeat(s.weaponUpgradeLevel);
+      setText(this.hudDoc, 'hud-upgrade', `WPN+ ${stars}`);
+    } else {
+      setText(this.hudDoc, 'hud-upgrade', '');
+    }
+
+    // Bonus objective
+    if (s.bonusObjective) {
+      const bo = s.bonusObjective;
+      if (bo.type === 'noDamage') {
+        setText(this.hudDoc, 'hud-bonus', `BONUS: ${bo.description}`);
+      } else {
+        setText(this.hudDoc, 'hud-bonus', `BONUS: ${bo.description} [${bo.progress}/${bo.target}] ${Math.ceil(bo.timeLeft)}s`);
+      }
+    } else {
+      setText(this.hudDoc, 'hud-bonus', '');
+    }
+
+    // Revenge surge indicator
+    if (s.revengeSurgeTimer > 0) {
+      setText(this.hudDoc, 'hud-revenge', `⚡ REVENGE ${Math.ceil(s.revengeSurgeTimer)}s`);
+    } else {
+      setText(this.hudDoc, 'hud-revenge', '');
+    }
+
+    // Multi-kill indicator
+    if (s.multiKillCount >= 3 && s.multiKillTimer > 0) {
+      setText(this.hudDoc, 'hud-multikill', `MULTI-KILL x${s.multiKillCount}!`);
+    } else {
+      setText(this.hudDoc, 'hud-multikill', '');
+    }
   }
 
   private updateResults(s: GameState) {
@@ -672,11 +724,16 @@ export class UISystem extends createSystem({
     setText(this.resultsDoc, 'results-highscore', `High Score: ${s.highScore}`);
     const rating = this.gameSystem.getPerformanceRating();
     setText(this.resultsDoc, 'results-rating', `Rating: ${rating}`);
+    const ratingColors: Record<string, string> = { S: '#ffaa00', A: '#00ff88', B: '#00ccff', C: '#ffffff', D: '#ff4444' };
+    const ratingEl = this.resultsDoc?.getElementById('results-rating') as UIKit.Text | undefined;
+    ratingEl?.setProperties({ color: ratingColors[rating] || '#00ff88', fontSize: '20' });
     setText(this.resultsDoc, 'results-wave', `Wave Reached: ${s.wave}`);
     setText(this.resultsDoc, 'results-kills', `Enemies Killed: ${s.kills}`);
     setText(this.resultsDoc, 'results-combo', `Best Combo: ${s.bestCombo}x`);
     setText(this.resultsDoc, 'results-time', `Time: ${Math.floor(s.gameTime / 60)}:${String(Math.floor(s.gameTime % 60)).padStart(2, '0')}`);
     setText(this.resultsDoc, 'results-missions', `Missions: ${s.missionsCompleted}`);
     setText(this.resultsDoc, 'results-achievements', `Achievements: ${s.runAchievementsEarned}`);
+    setText(this.resultsDoc, 'results-bonus', `Bonus Objectives: ${s.bonusObjectivesCompleted}`);
+    setText(this.resultsDoc, 'results-multikill', `Best Multi-Kill: ${s.multiKillBest}x`);
   }
 }
