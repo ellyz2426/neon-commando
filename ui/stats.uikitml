@@ -44,6 +44,8 @@
     <div id="stat-dogtags" class="stat-row">Dog Tags: 0</div>
     <div id="stat-airstrikes" class="stat-row">Air Strikes: 0</div>
     <div id="stat-apckills" class="stat-row">APCs Destroyed: 0</div>
+    <div id="stat-medkits" class="stat-row">Medkits Deployed: 0</div>
+    <div id="stat-radiokills" class="stat-row">Radio Ops Killed: 0</div>
     <div id="btn-close-stats" class="close-btn">Close</div>
   </div>
 </panel>

@@ -142,13 +142,37 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
+              "Medkits Deployed: 0"
+            ],
+            "properties": {
+              "id": "stat-medkits",
+              "class": "stat-row"
+            },
+            "dataUid": "uid-14"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Radio Ops Killed: 0"
+            ],
+            "properties": {
+              "id": "stat-radiokills",
+              "class": "stat-row"
+            },
+            "dataUid": "uid-15"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
               "Close"
             ],
             "properties": {
               "id": "btn-close-stats",
               "class": "close-btn"
             },
-            "dataUid": "uid-14"
+            "dataUid": "uid-16"
           }
         ],
         "properties": {
@@ -208,7 +232,7 @@
         "column": 0
       },
       "end": {
-        "line": 48,
+        "line": 50,
         "column": 8
       }
     },
@@ -258,7 +282,7 @@
         "column": 2
       },
       "end": {
-        "line": 47,
+        "line": 49,
         "column": 8
       }
     },
@@ -379,6 +403,26 @@
       },
       "end": {
         "line": 46,
+        "column": 69
+      }
+    },
+    "uid-15": {
+      "start": {
+        "line": 47,
+        "column": 4
+      },
+      "end": {
+        "line": 47,
+        "column": 72
+      }
+    },
+    "uid-16": {
+      "start": {
+        "line": 48,
+        "column": 4
+      },
+      "end": {
+        "line": 48,
         "column": 59
       }
     }

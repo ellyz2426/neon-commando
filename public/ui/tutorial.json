@@ -99,7 +99,7 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
-              "F: Mount/Dismount Turret"
+              "C: Deploy Medkit"
             ],
             "properties": {
               "class": "control-row"
@@ -110,7 +110,7 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
-              "Tab: Cycle Weapon"
+              "F: Mount/Dismount Turret"
             ],
             "properties": {
               "class": "control-row"
@@ -121,7 +121,7 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
-              "Shift: Dodge Roll"
+              "Tab: Cycle Weapon"
             ],
             "properties": {
               "class": "control-row"
@@ -132,7 +132,7 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
-              "Numpad: Aim Direction"
+              "Shift: Dodge Roll"
             ],
             "properties": {
               "class": "control-row"
@@ -143,7 +143,7 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
-              "Esc / P: Pause"
+              "Numpad: Aim Direction"
             ],
             "properties": {
               "class": "control-row"
@@ -154,12 +154,23 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
+              "Esc / P: Pause"
+            ],
+            "properties": {
+              "class": "control-row"
+            },
+            "dataUid": "uid-16"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
               "-- VR CONTROLLERS --"
             ],
             "properties": {
               "class": "section"
             },
-            "dataUid": "uid-16"
+            "dataUid": "uid-17"
           },
           {
             "type": "container",
@@ -170,7 +181,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-17"
+            "dataUid": "uid-18"
           },
           {
             "type": "container",
@@ -181,7 +192,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-18"
+            "dataUid": "uid-19"
           },
           {
             "type": "container",
@@ -192,7 +203,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-19"
+            "dataUid": "uid-20"
           },
           {
             "type": "container",
@@ -203,7 +214,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-20"
+            "dataUid": "uid-21"
           },
           {
             "type": "container",
@@ -214,7 +225,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-21"
+            "dataUid": "uid-22"
           },
           {
             "type": "container",
@@ -225,7 +236,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-22"
+            "dataUid": "uid-23"
           },
           {
             "type": "container",
@@ -236,7 +247,7 @@
             "properties": {
               "class": "section"
             },
-            "dataUid": "uid-23"
+            "dataUid": "uid-24"
           },
           {
             "type": "container",
@@ -247,7 +258,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-24"
+            "dataUid": "uid-25"
           },
           {
             "type": "container",
@@ -258,7 +269,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-25"
+            "dataUid": "uid-26"
           },
           {
             "type": "container",
@@ -269,7 +280,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-26"
+            "dataUid": "uid-27"
           },
           {
             "type": "container",
@@ -280,7 +291,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-27"
+            "dataUid": "uid-28"
           },
           {
             "type": "container",
@@ -291,7 +302,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-28"
+            "dataUid": "uid-29"
           },
           {
             "type": "container",
@@ -302,7 +313,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-29"
+            "dataUid": "uid-30"
           },
           {
             "type": "container",
@@ -313,7 +324,40 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-30"
+            "dataUid": "uid-31"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Stay near walls/sandbags for cover"
+            ],
+            "properties": {
+              "class": "control-row"
+            },
+            "dataUid": "uid-32"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Deploy medkits for heal-over-time"
+            ],
+            "properties": {
+              "class": "control-row"
+            },
+            "dataUid": "uid-33"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Kill radio operators before they call backup!"
+            ],
+            "properties": {
+              "class": "control-row"
+            },
+            "dataUid": "uid-34"
           },
           {
             "type": "container",
@@ -324,7 +368,7 @@
             "properties": {
               "class": "control-row"
             },
-            "dataUid": "uid-31"
+            "dataUid": "uid-35"
           },
           {
             "type": "container",
@@ -336,7 +380,7 @@
               "id": "btn-close-tutorial",
               "class": "close-btn"
             },
-            "dataUid": "uid-32"
+            "dataUid": "uid-36"
           }
         ],
         "properties": {
@@ -403,7 +447,7 @@
         "column": 0
       },
       "end": {
-        "line": 71,
+        "line": 75,
         "column": 8
       }
     },
@@ -463,7 +507,7 @@
         "column": 2
       },
       "end": {
-        "line": 70,
+        "line": 74,
         "column": 8
       }
     },
@@ -554,7 +598,7 @@
       },
       "end": {
         "line": 48,
-        "column": 59
+        "column": 51
       }
     },
     "uid-12": {
@@ -564,7 +608,7 @@
       },
       "end": {
         "line": 49,
-        "column": 52
+        "column": 59
       }
     },
     "uid-13": {
@@ -584,7 +628,7 @@
       },
       "end": {
         "line": 51,
-        "column": 56
+        "column": 52
       }
     },
     "uid-15": {
@@ -594,7 +638,7 @@
       },
       "end": {
         "line": 52,
-        "column": 49
+        "column": 56
       }
     },
     "uid-16": {
@@ -604,7 +648,7 @@
       },
       "end": {
         "line": 53,
-        "column": 51
+        "column": 49
       }
     },
     "uid-17": {
@@ -634,7 +678,7 @@
       },
       "end": {
         "line": 56,
-        "column": 55
+        "column": 51
       }
     },
     "uid-20": {
@@ -644,7 +688,7 @@
       },
       "end": {
         "line": 57,
-        "column": 52
+        "column": 55
       }
     },
     "uid-21": {
@@ -654,7 +698,7 @@
       },
       "end": {
         "line": 58,
-        "column": 56
+        "column": 52
       }
     },
     "uid-22": {
@@ -664,7 +708,7 @@
       },
       "end": {
         "line": 59,
-        "column": 50
+        "column": 56
       }
     },
     "uid-23": {
@@ -674,7 +718,7 @@
       },
       "end": {
         "line": 60,
-        "column": 41
+        "column": 50
       }
     },
     "uid-24": {
@@ -684,7 +728,7 @@
       },
       "end": {
         "line": 61,
-        "column": 64
+        "column": 41
       }
     },
     "uid-25": {
@@ -694,7 +738,7 @@
       },
       "end": {
         "line": 62,
-        "column": 63
+        "column": 64
       }
     },
     "uid-26": {
@@ -704,7 +748,7 @@
       },
       "end": {
         "line": 63,
-        "column": 57
+        "column": 63
       }
     },
     "uid-27": {
@@ -714,7 +758,7 @@
       },
       "end": {
         "line": 64,
-        "column": 69
+        "column": 57
       }
     },
     "uid-28": {
@@ -724,7 +768,7 @@
       },
       "end": {
         "line": 65,
-        "column": 77
+        "column": 69
       }
     },
     "uid-29": {
@@ -734,7 +778,7 @@
       },
       "end": {
         "line": 66,
-        "column": 70
+        "column": 77
       }
     },
     "uid-30": {
@@ -754,7 +798,7 @@
       },
       "end": {
         "line": 68,
-        "column": 67
+        "column": 70
       }
     },
     "uid-32": {
@@ -764,6 +808,46 @@
       },
       "end": {
         "line": 69,
+        "column": 69
+      }
+    },
+    "uid-33": {
+      "start": {
+        "line": 70,
+        "column": 4
+      },
+      "end": {
+        "line": 70,
+        "column": 68
+      }
+    },
+    "uid-34": {
+      "start": {
+        "line": 71,
+        "column": 4
+      },
+      "end": {
+        "line": 71,
+        "column": 80
+      }
+    },
+    "uid-35": {
+      "start": {
+        "line": 72,
+        "column": 4
+      },
+      "end": {
+        "line": 72,
+        "column": 67
+      }
+    },
+    "uid-36": {
+      "start": {
+        "line": 73,
+        "column": 4
+      },
+      "end": {
+        "line": 73,
         "column": 62
       }
     }

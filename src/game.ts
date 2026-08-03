@@ -319,6 +319,16 @@ interface AirStrike {
   impacted: boolean;
 }
 
+interface Medkit {
+  mesh: Group;
+  x: number;
+  z: number;
+  usesLeft: number;
+  maxUses: number;
+  healTimer: number;
+  pulseTimer: number;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -461,6 +471,16 @@ export interface GameState {
   careerAirStrikes: number;
   // APC tracking
   careerAPCKills: number;
+  // Cover system
+  inCover: boolean;
+  coverTimer: number;
+  // Medkit system
+  medkitCharges: number;
+  medkitCooldown: number;
+  careerMedkitsDeployed: number;
+  // Radio operator tracking
+  careerRadioOpsKilled: number;
+  reinforcementsCalled: number;
 }
 
 // ── Constants ──
@@ -541,6 +561,7 @@ export class GameSystem extends createSystem({}) {
   private dogTags: DogTag[] = [];
   private radioChatterQueue: string[] = [];
   private airStrikes: AirStrike[] = [];
+  private medkits: Medkit[] = [];
 
   init() {
     this.state = this.createDefaultState();
@@ -665,6 +686,13 @@ export class GameSystem extends createSystem({}) {
       airSupportReady: true,
       careerAirStrikes: 0,
       careerAPCKills: 0,
+      inCover: false,
+      coverTimer: 0,
+      medkitCharges: 2,
+      medkitCooldown: 0,
+      careerMedkitsDeployed: 0,
+      careerRadioOpsKilled: 0,
+      reinforcementsCalled: 0,
     };
   }
 
@@ -694,6 +722,8 @@ export class GameSystem extends createSystem({}) {
         this.state.careerDogTags = s.careerDogTags || 0;
         this.state.careerAirStrikes = s.careerAirStrikes || 0;
         this.state.careerAPCKills = s.careerAPCKills || 0;
+        this.state.careerMedkitsDeployed = s.careerMedkitsDeployed || 0;
+        this.state.careerRadioOpsKilled = s.careerRadioOpsKilled || 0;
       }
       const settings = localStorage.getItem('neon-commando-settings');
       if (settings) {
@@ -739,6 +769,8 @@ export class GameSystem extends createSystem({}) {
         careerDogTags: this.state.careerDogTags,
         careerAirStrikes: this.state.careerAirStrikes,
         careerAPCKills: this.state.careerAPCKills,
+        careerMedkitsDeployed: this.state.careerMedkitsDeployed,
+        careerRadioOpsKilled: this.state.careerRadioOpsKilled,
       }));
       this.addToLeaderboard(this.state.score, this.state.wave);
       this.checkScoreAchievements();
@@ -1186,6 +1218,46 @@ export class GameSystem extends createSystem({}) {
         group.add(armor);
         break;
       }
+      case 'radio_op': {
+        hp = 2; points = 250; speed = 1.5; shootInterval = 3.0; aggroRange = 14;
+        // Radio operator — low-combat, calls for reinforcements if not killed quickly
+        const roBodyGeo = new BoxGeometry(0.4, 0.55, 0.35);
+        const roColor = new Color(0x22ff88);
+        const roBodyMat = new MeshStandardMaterial({ color: roColor, emissive: roColor, emissiveIntensity: 0.5 });
+        group.add(new Mesh(roBodyGeo, roBodyMat));
+        const roHeadGeo = new SphereGeometry(0.14, 6, 5);
+        const roHead = new Mesh(roHeadGeo, roBodyMat);
+        roHead.position.y = 0.42;
+        group.add(roHead);
+        // Radio backpack
+        const packGeo = new BoxGeometry(0.3, 0.35, 0.2);
+        const packMat = new MeshStandardMaterial({ color: 0x226644, emissive: roColor, emissiveIntensity: 0.3 });
+        const pack = new Mesh(packGeo, packMat);
+        pack.position.set(0, 0.1, 0.2);
+        group.add(pack);
+        // Antenna mast
+        const antennaGeo = new CylinderGeometry(0.02, 0.02, 0.8, 4);
+        const antennaMat = new MeshBasicMaterial({ color: 0x44ffaa });
+        const antenna = new Mesh(antennaGeo, antennaMat);
+        antenna.position.set(0.1, 0.5, 0.2);
+        group.add(antenna);
+        // Antenna tip blink
+        const tipGeo = new SphereGeometry(0.05, 4, 3);
+        const tipMat = new MeshBasicMaterial({ color: 0xff0000 });
+        const tip = new Mesh(tipGeo, tipMat);
+        tip.position.set(0.1, 0.9, 0.2);
+        tip.name = 'radioTip';
+        group.add(tip);
+        // Pulsing warning ring
+        const warnRingGeo = new RingGeometry(0.8, 1.0, 12);
+        const warnRingMat = new MeshBasicMaterial({ color: 0x22ff88, transparent: true, opacity: 0.15, side: DoubleSide });
+        const warnRing = new Mesh(warnRingGeo, warnRingMat);
+        warnRing.rotation.x = -Math.PI / 2;
+        warnRing.position.y = 0.03;
+        warnRing.name = 'radioRing';
+        group.add(warnRing);
+        break;
+      }
       case 'boss': {
         hp = 15 + this.state.wave * 3; points = 2000; speed = 1.5; shootInterval = 0.8; aggroRange = 25;
         // Large mech boss
@@ -1346,6 +1418,11 @@ export class GameSystem extends createSystem({}) {
       flashTimer: 0,
     };
     (enemy as any).isElite = isElite;
+    // Radio operator call-in timer
+    if (type === 'radio_op') {
+      (enemy as any).radioCallTimer = 8.0; // 8 seconds to call reinforcements
+      (enemy as any).radioCalled = false;
+    }
     return enemy;
   }
 
@@ -1844,6 +1921,7 @@ export class GameSystem extends createSystem({}) {
       if (this.state.inVehicle) this.state.vehicleKills++;
       // Officer kill tracking
       if (enemy.type === 'officer') this.state.careerOfficerKills++;
+      if (enemy.type === 'radio_op') this.state.careerRadioOpsKilled++;
       if (this.state.killStreak > this.state.killStreakBest) {
         this.state.killStreakBest = this.state.killStreak;
       }
@@ -1930,6 +2008,15 @@ export class GameSystem extends createSystem({}) {
         this.state.screenShake = 0.15;
         (this as any).audioSystem?.playShieldBreak();
       }
+      return;
+    }
+
+    // Cover system: 60% chance to block damage when behind cover
+    if (this.state.inCover && Math.random() < 0.6) {
+      this.state.screenShake = 0.1;
+      // Visual feedback — minor flash only
+      this.state.damageFlashTimer = 0.1;
+      this.triggerRadioChatter('Cover absorbed the hit! Stay low!');
       return;
     }
 
@@ -2400,6 +2487,7 @@ export class GameSystem extends createSystem({}) {
     if (wave >= 7) types.push('tank');
     if (wave >= 8) types.push('helicopter');
     if (wave >= 7) types.push('apc');
+    if (wave >= 8) types.push('radio_op');
 
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -2432,6 +2520,11 @@ export class GameSystem extends createSystem({}) {
     s.turretHp = 0;
     s.decoyCooldown = 0;
     s.decoyActive = false;
+    s.inCover = false;
+    s.coverTimer = 0;
+    s.medkitCharges = 2;
+    s.medkitCooldown = 0;
+    s.reinforcementsCalled = 0;
     s.rollTimer = 0;
     s.rollCooldown = 0;
     s.rollDirX = 0;
@@ -2531,6 +2624,8 @@ export class GameSystem extends createSystem({}) {
     this.turretEmplacements = [];
     this.activeTurret = null;
     this.clearDecoys();
+    for (const mk of this.medkits) this.world.scene.remove(mk.mesh);
+    this.medkits = [];
   }
 
   // ── Vehicle System ──
@@ -3133,7 +3228,7 @@ export class GameSystem extends createSystem({}) {
     }
     // Drop dog tag (30% chance for regular, 100% for officers/APCs, 60% for elites)
     const isElite = (enemy as any).isElite;
-    const tagChance = (enemy.type === 'officer' || enemy.type === 'apc') ? 1.0 : isElite ? 0.6 : 0.3;
+    const tagChance = (enemy.type === 'officer' || enemy.type === 'apc' || enemy.type === 'radio_op') ? 1.0 : isElite ? 0.6 : 0.3;
     if (Math.random() < tagChance) {
       this.spawnDogTag(enemy.x, enemy.z);
     }
@@ -3579,6 +3674,8 @@ export class GameSystem extends createSystem({}) {
       this.updateDogTags(dt);
       this.updateRadioChatter(dt);
       this.updateAirStrikes(dt);
+      this.updateCoverSystem(dt);
+      this.updateMedkits(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -3621,6 +3718,9 @@ export class GameSystem extends createSystem({}) {
     // Air support call-in: R key
     let airSupportTrigger = false;
     if (kb.getKeyDown('KeyR')) airSupportTrigger = true;
+    // Medkit deploy: C key
+    let medkitDeploy = false;
+    if (kb.getKeyDown('KeyC')) medkitDeploy = true;
     // Turret mount/dismount: F key
     let turretToggle = false;
     if (kb.getKeyDown('KeyF')) turretToggle = true;
@@ -3798,6 +3898,11 @@ export class GameSystem extends createSystem({}) {
     // Air support call-in
     if (airSupportTrigger && s.airSupportReady && s.airSupportCooldown <= 0) {
       this.callAirSupport();
+    }
+
+    // Medkit deploy
+    if (medkitDeploy) {
+      this.deployMedkit();
     }
 
     // Turret mount/dismount
@@ -4110,6 +4215,37 @@ export class GameSystem extends createSystem({}) {
             e.vx *= 0.95;
             e.vz *= 0.95;
           }
+        } else if (e.type === 'radio_op') {
+          // Radio operator: tries to stay at distance and call reinforcements
+          if (dist < 6) {
+            e.vx = -(dx / dist) * e.speed * 1.5;
+            e.vz = -(dz / dist) * e.speed * 1.5;
+          } else if (dist < 12) {
+            e.vx = Math.cos(e.moveTimer * 1.2) * e.speed;
+            e.vz = Math.sin(e.moveTimer * 1.2) * e.speed * 0.3;
+          } else {
+            e.vx *= 0.9; e.vz *= 0.9;
+          }
+          // Radio call-in countdown
+          const re = e as any;
+          if (!re.radioCalled) {
+            re.radioCallTimer -= dt;
+            const tip = e.mesh.getObjectByName('radioTip') as Mesh | undefined;
+            if (tip) {
+              const blinkRate = Math.max(2, 10 - re.radioCallTimer);
+              (tip.material as MeshBasicMaterial).opacity = Math.sin(e.moveTimer * blinkRate) > 0 ? 1 : 0.2;
+            }
+            const ring = e.mesh.getObjectByName('radioRing') as Mesh | undefined;
+            if (ring) {
+              const urgency = 1 - (re.radioCallTimer / 8);
+              (ring.material as MeshBasicMaterial).opacity = 0.1 + urgency * 0.3;
+              ring.scale.setScalar(1 + Math.sin(e.moveTimer * 4) * 0.1 * urgency);
+            }
+            if (re.radioCallTimer <= 0) {
+              re.radioCalled = true;
+              this.callRadioReinforcements(e);
+            }
+          }
         } else {
           // Standard AI: approach then strafe
           if (dist > e.aggroRange) {
@@ -4159,7 +4295,12 @@ export class GameSystem extends createSystem({}) {
             aimDx = decoyTarget.x - e.x;
             aimDz = decoyTarget.z - e.z;
           }
-          const angle = Math.atan2(aimDx, aimDz) + Math.PI;
+          // Cover system: enemies miss more when player is behind cover (spread aim by ±0.4 rad)
+          let coverSpread = 0;
+          if (s.inCover && !decoyTarget) {
+            coverSpread = (Math.random() - 0.5) * 0.8;
+          }
+          const angle = Math.atan2(aimDx, aimDz) + Math.PI + coverSpread;
 
           if (e.type === 'boss') {
             // Boss multi-shot with tracers
@@ -4400,6 +4541,10 @@ export class GameSystem extends createSystem({}) {
           s.grenadeCount = Math.min(s.grenadeCount + 2, s.maxGrenades);
           // Refill smoke grenades
           s.smokeGrenadeCount = Math.min(s.smokeGrenadeCount + 1, 4);
+          // Refill medkit charge (50% chance, max 3)
+          if (Math.random() < 0.5 && s.medkitCharges < 3) {
+            s.medkitCharges++;
+          }
           this.world.scene.remove(crate.mesh);
           this.supplyCrates.splice(i, 1);
           continue;
@@ -5565,6 +5710,187 @@ export class GameSystem extends createSystem({}) {
       // Remove after impact
       if (strike.impacted) {
         this.airStrikes.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Radio Operator Reinforcements ──
+  private callRadioReinforcements(radioEnemy: Enemy) {
+    const s = this.state;
+    s.reinforcementsCalled++;
+    this.triggerRadioChatter('⚠ ENEMY REINFORCEMENTS INCOMING!');
+    (this as any).audioSystem?.playBossEntrance();
+
+    // Spawn 3-5 soldiers near the radio operator
+    const count = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      if (this.enemies.length < MAX_ENEMIES) {
+        const sx = radioEnemy.x + (Math.random() - 0.5) * 6;
+        const sz = radioEnemy.z - 2 - Math.random() * 4;
+        const types = ['soldier', 'soldier', 'heavy', 'runner'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        this.enemies.push(this.createEnemy(type, sx, sz));
+      }
+    }
+    // Extra particles burst from radio enemy
+    const colors = this.getColors();
+    for (let i = 0; i < 8; i++) {
+      this.spawnParticle(radioEnemy.x, 1.2, radioEnemy.z, '#22ff88', 1.5);
+    }
+  }
+
+  // ── Cover System ──
+  private updateCoverSystem(_dt: number) {
+    const s = this.state;
+    s.inCover = false;
+    // Check proximity to non-destructible obstacles (sandbags and walls provide cover)
+    for (const obs of this.obstacles) {
+      if (obs.type !== 'sandbag' && obs.type !== 'wall') continue;
+      const dx = s.playerX - obs.x;
+      const dz = s.playerZ - obs.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < obs.radius + 0.8) {
+        s.inCover = true;
+        break;
+      }
+    }
+    // Also count bunker terrain features as cover
+    if (!s.inCover) {
+      for (const tf of this.terrainFeatures) {
+        if (tf.type !== 'bunker') continue;
+        const dx = s.playerX - tf.mesh.position.x;
+        const dz = s.playerZ - tf.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 2.5) {
+          s.inCover = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Medkit System ──
+  private spawnMedkit(x: number, z: number) {
+    const group = new Group();
+    const colors = this.getColors();
+
+    // Base box
+    const boxGeo = new BoxGeometry(0.6, 0.4, 0.6);
+    const boxMat = new MeshStandardMaterial({ color: 0x225522, emissive: new Color(0x00ff44), emissiveIntensity: 0.3 });
+    group.add(new Mesh(boxGeo, boxMat));
+
+    // Green cross on top
+    const crossH = new Mesh(
+      new BoxGeometry(0.4, 0.06, 0.12),
+      new MeshBasicMaterial({ color: 0x00ff44 }),
+    );
+    crossH.position.y = 0.23;
+    group.add(crossH);
+    const crossV = new Mesh(
+      new BoxGeometry(0.12, 0.06, 0.4),
+      new MeshBasicMaterial({ color: 0x00ff44 }),
+    );
+    crossV.position.y = 0.23;
+    group.add(crossV);
+
+    // Healing aura ring
+    const auraGeo = new RingGeometry(1.8, 2.0, 16);
+    const auraMat = new MeshBasicMaterial({ color: 0x00ff44, transparent: true, opacity: 0.15, side: DoubleSide });
+    const aura = new Mesh(auraGeo, auraMat);
+    aura.rotation.x = -Math.PI / 2;
+    aura.position.y = 0.05;
+    aura.name = 'medkitAura';
+    group.add(aura);
+
+    group.position.set(x, 0, z);
+    this.world.scene.add(group);
+
+    this.medkits.push({
+      mesh: group,
+      x, z,
+      usesLeft: 3,
+      maxUses: 3,
+      healTimer: 0,
+      pulseTimer: 0,
+    });
+  }
+
+  private deployMedkit() {
+    const s = this.state;
+    if (s.medkitCharges <= 0 || s.medkitCooldown > 0 || s.inVehicle || s.inTurret) return;
+    s.medkitCharges--;
+    s.medkitCooldown = 5; // 5-second cooldown between deployments
+    s.careerMedkitsDeployed++;
+    this.spawnMedkit(s.playerX, s.playerZ);
+    this.triggerRadioChatter('MEDKIT DEPLOYED! Get to the heal zone.');
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private updateMedkits(dt: number) {
+    const s = this.state;
+    // Cooldown countdown
+    if (s.medkitCooldown > 0) s.medkitCooldown -= dt;
+
+    for (let i = this.medkits.length - 1; i >= 0; i--) {
+      const mk = this.medkits[i];
+      mk.pulseTimer += dt;
+
+      // Visual pulse on aura
+      const aura = mk.mesh.getObjectByName('medkitAura') as Mesh | undefined;
+      if (aura) {
+        (aura.material as MeshBasicMaterial).opacity = 0.1 + Math.sin(mk.pulseTimer * 3) * 0.1;
+        aura.scale.setScalar(1 + Math.sin(mk.pulseTimer * 2) * 0.05);
+      }
+
+      // Cross glow bob
+      mk.mesh.position.y = Math.sin(mk.pulseTimer * 2) * 0.03;
+
+      // Heal player if in range
+      const dx = s.playerX - mk.x;
+      const dz = s.playerZ - mk.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 2.0 && mk.usesLeft > 0) {
+        mk.healTimer += dt;
+        if (mk.healTimer >= 2.0) {
+          mk.healTimer = 0;
+          mk.usesLeft--;
+          if (s.lives < 9) {
+            s.lives++;
+            // Heal particle burst
+            for (let p = 0; p < 6; p++) {
+              this.spawnParticle(mk.x, 0.5, mk.z, '#00ff44', 1.0);
+            }
+            (this as any).audioSystem?.playPowerUp();
+          }
+        }
+      } else {
+        mk.healTimer = 0;
+      }
+
+      // Remove if depleted or too far behind
+      if (mk.usesLeft <= 0 || mk.z > s.playerZ + 15) {
+        // Fade-out particles
+        if (mk.usesLeft <= 0) {
+          for (let p = 0; p < 4; p++) {
+            this.spawnParticle(mk.x, 0.3, mk.z, '#00ff44', 0.8);
+          }
+        }
+        this.world.scene.remove(mk.mesh);
+        this.medkits.splice(i, 1);
+      }
+    }
+    // Also heal companion if near a medkit
+    if (this.companion && !this.companion.alive) {
+      for (const mk of this.medkits) {
+        if (mk.usesLeft <= 0) continue;
+        const cdx = this.companion.x - mk.x;
+        const cdz = this.companion.z - mk.z;
+        if (Math.sqrt(cdx * cdx + cdz * cdz) < 2.0) {
+          this.companion.alive = true;
+          s.companionAlive = true;
+          mk.usesLeft--;
+          break;
+        }
       }
     }
   }

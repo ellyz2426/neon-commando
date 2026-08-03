@@ -450,6 +450,8 @@ export class UISystem extends createSystem({
     setText(this.statsDoc, 'stat-dogtags', `Dog Tags: ${s.careerDogTags}`);
     setText(this.statsDoc, 'stat-airstrikes', `Air Strikes: ${s.careerAirStrikes}`);
     setText(this.statsDoc, 'stat-apckills', `APCs Destroyed: ${s.careerAPCKills}`);
+    setText(this.statsDoc, 'stat-medkits', `Medkits Deployed: ${s.careerMedkitsDeployed}`);
+    setText(this.statsDoc, 'stat-radiokills', `Radio Ops Killed: ${s.careerRadioOpsKilled}`);
     setText(this.statsDoc, 'stat-highscore', `High Score: ${s.highScore}`);
     setText(this.statsDoc, 'stat-missions', `Missions: ${s.careerMissions}`);
     setText(this.statsDoc, 'stat-vehicles', `Vehicles Used: ${s.careerVehiclesUsed}`);
@@ -763,6 +765,24 @@ export class UISystem extends createSystem({
       setText(this.hudDoc, 'hud-dogtags', `🏷 Tags: ${s.runDogTags} (${nextLife} to 1UP)`);
     } else {
       setText(this.hudDoc, 'hud-dogtags', '');
+    }
+
+    // Cover indicator
+    if (s.inCover) {
+      setText(this.hudDoc, 'hud-cover', '🛡 IN COVER');
+    } else {
+      setText(this.hudDoc, 'hud-cover', '');
+    }
+
+    // Medkit indicator
+    if (s.medkitCharges > 0) {
+      if (s.medkitCooldown > 0) {
+        setText(this.hudDoc, 'hud-medkit', `C: Medkit [${s.medkitCharges}] (${Math.ceil(s.medkitCooldown)}s)`);
+      } else {
+        setText(this.hudDoc, 'hud-medkit', `C: Deploy Medkit [${s.medkitCharges}]`);
+      }
+    } else {
+      setText(this.hudDoc, 'hud-medkit', '');
     }
   }
 
