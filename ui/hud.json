@@ -1,0 +1,1411 @@
+{
+  "element": {
+    "sourceTag": "panel",
+    "type": "custom",
+    "children": [
+      {
+        "type": "container",
+        "sourceTag": "div",
+        "children": [
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [],
+            "properties": {
+              "id": "hud-wave-announce"
+            },
+            "dataUid": "uid-3"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [],
+            "properties": {
+              "id": "hud-weapon-pickup"
+            },
+            "dataUid": "uid-4"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [
+                      "Score: 0"
+                    ],
+                    "properties": {
+                      "id": "hud-score",
+                      "class": "hud-item"
+                    },
+                    "dataUid": "uid-7"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [
+                      "Wave 1"
+                    ],
+                    "properties": {
+                      "id": "hud-wave",
+                      "class": "hud-item"
+                    },
+                    "dataUid": "uid-8"
+                  }
+                ],
+                "properties": {
+                  "class": "left-group"
+                },
+                "dataUid": "uid-6"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-combo"
+                    },
+                    "dataUid": "uid-10"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-weapon"
+                    },
+                    "dataUid": "uid-11"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-shield"
+                    },
+                    "dataUid": "uid-12"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-streak"
+                    },
+                    "dataUid": "uid-13"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-upgrade"
+                    },
+                    "dataUid": "uid-14"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-revenge"
+                    },
+                    "dataUid": "uid-15"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-multikill"
+                    },
+                    "dataUid": "uid-16"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-timer"
+                    },
+                    "dataUid": "uid-17"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-achievement"
+                    },
+                    "dataUid": "uid-18"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-bonus"
+                    },
+                    "dataUid": "uid-19"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-turret"
+                    },
+                    "dataUid": "uid-20"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-decoy"
+                    },
+                    "dataUid": "uid-21"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-air-support"
+                    },
+                    "dataUid": "uid-22"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-dogtags"
+                    },
+                    "dataUid": "uid-23"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-cover"
+                    },
+                    "dataUid": "uid-24"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-medkit"
+                    },
+                    "dataUid": "uid-25"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-nightvision"
+                    },
+                    "dataUid": "uid-26"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-drone"
+                    },
+                    "dataUid": "uid-27"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-flare"
+                    },
+                    "dataUid": "uid-28"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-sandbag"
+                    },
+                    "dataUid": "uid-29"
+                  }
+                ],
+                "properties": {
+                  "class": "center-group"
+                },
+                "dataUid": "uid-9"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [
+                      "Lives: 3"
+                    ],
+                    "properties": {
+                      "id": "hud-lives",
+                      "class": "hud-item"
+                    },
+                    "dataUid": "uid-31"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [
+                      "G: 5"
+                    ],
+                    "properties": {
+                      "id": "hud-grenades",
+                      "class": "hud-item"
+                    },
+                    "dataUid": "uid-32"
+                  }
+                ],
+                "properties": {
+                  "class": "right-group"
+                },
+                "dataUid": "uid-30"
+              }
+            ],
+            "properties": {
+              "class": "top-row"
+            },
+            "dataUid": "uid-5"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [],
+            "properties": {
+              "id": "hud-radio"
+            },
+            "dataUid": "uid-33"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  "Enemies"
+                ],
+                "properties": {
+                  "id": "hud-progress-label"
+                },
+                "dataUid": "uid-35"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-progress-fill"
+                    },
+                    "dataUid": "uid-37"
+                  }
+                ],
+                "properties": {
+                  "class": "bar-bg"
+                },
+                "dataUid": "uid-36"
+              }
+            ],
+            "properties": {
+              "class": "progress-row",
+              "id": "hud-wave-progress"
+            },
+            "dataUid": "uid-34"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  "BOSS"
+                ],
+                "properties": {
+                  "id": "hud-boss-label"
+                },
+                "dataUid": "uid-39"
+              },
+              {
+                "type": "container",
+                "sourceTag": "div",
+                "children": [
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-boss-fill"
+                    },
+                    "dataUid": "uid-41"
+                  }
+                ],
+                "properties": {
+                  "class": "boss-bar-bg"
+                },
+                "dataUid": "uid-40"
+              }
+            ],
+            "properties": {
+              "class": "progress-row",
+              "id": "hud-boss-progress"
+            },
+            "dataUid": "uid-38"
+          }
+        ],
+        "properties": {
+          "id": "root"
+        },
+        "dataUid": "uid-2"
+      }
+    ],
+    "properties": {},
+    "dataUid": "uid-1"
+  },
+  "classes": {
+    "top-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "justifyContent": "space-between",
+        "gap": "12"
+      }
+    },
+    "hud-item": {
+      "content": {
+        "fontSize": "14",
+        "color": "#00ff88"
+      }
+    },
+    "left-group": {
+      "content": {
+        "flexDirection": "row",
+        "gap": "12",
+        "alignItems": "center"
+      }
+    },
+    "right-group": {
+      "content": {
+        "flexDirection": "row",
+        "gap": "8",
+        "alignItems": "center"
+      }
+    },
+    "center-group": {
+      "content": {
+        "flexDirection": "column",
+        "alignItems": "center",
+        "gap": "2"
+      }
+    },
+    "progress-row": {
+      "content": {
+        "flexDirection": "row",
+        "alignItems": "center",
+        "gap": "6"
+      }
+    },
+    "bar-bg": {
+      "content": {
+        "width": "120",
+        "height": "6",
+        "backgroundColor": "rgba(0, 255, 136, 0.2)",
+        "borderRadius": 3
+      }
+    },
+    "boss-bar-bg": {
+      "content": {
+        "width": "120",
+        "height": "6",
+        "backgroundColor": "rgba(255, 34, 0, 0.2)",
+        "borderRadius": 3
+      }
+    },
+    "__id__root": {
+      "content": {
+        "flexDirection": "column",
+        "alignItems": "stretch",
+        "padding": "8",
+        "gap": "4",
+        "backgroundColor": "rgba(10, 26, 10, 0.8)",
+        "borderRadius": 8,
+        "borderColor": "#00ff88",
+        "borderWidth": "1"
+      }
+    },
+    "__id__hud-combo": {
+      "content": {
+        "fontSize": "16",
+        "color": "#ffaa00"
+      }
+    },
+    "__id__hud-weapon": {
+      "content": {
+        "fontSize": "12",
+        "color": "#ff8800"
+      }
+    },
+    "__id__hud-shield": {
+      "content": {
+        "fontSize": "12",
+        "color": "#0088ff"
+      }
+    },
+    "__id__hud-timer": {
+      "content": {
+        "fontSize": "14",
+        "color": "#ff4444"
+      }
+    },
+    "__id__hud-streak": {
+      "content": {
+        "fontSize": "12",
+        "color": "#ff00ff"
+      }
+    },
+    "__id__hud-achievement": {
+      "content": {
+        "fontSize": "12",
+        "color": "#ffaa00"
+      }
+    },
+    "__id__hud-upgrade": {
+      "content": {
+        "fontSize": "12",
+        "color": "#00ff44"
+      }
+    },
+    "__id__hud-bonus": {
+      "content": {
+        "fontSize": "11",
+        "color": "#ffcc00"
+      }
+    },
+    "__id__hud-revenge": {
+      "content": {
+        "fontSize": "14",
+        "color": "#ff6600"
+      }
+    },
+    "__id__hud-multikill": {
+      "content": {
+        "fontSize": "16",
+        "color": "#ff00ff"
+      }
+    },
+    "__id__hud-turret": {
+      "content": {
+        "fontSize": "12",
+        "color": "#ffcc44"
+      }
+    },
+    "__id__hud-decoy": {
+      "content": {
+        "fontSize": "11",
+        "color": "#44ccff"
+      }
+    },
+    "__id__hud-radio": {
+      "content": {
+        "fontSize": "11",
+        "color": "#44ff88",
+        "backgroundColor": "rgba(0, 40, 0, 0.6)",
+        "padding": "3",
+        "borderRadius": 4
+      }
+    },
+    "__id__hud-air-support": {
+      "content": {
+        "fontSize": "11",
+        "color": "#ff8844"
+      }
+    },
+    "__id__hud-dogtags": {
+      "content": {
+        "fontSize": "11",
+        "color": "#aaccff"
+      }
+    },
+    "__id__hud-cover": {
+      "content": {
+        "fontSize": "12",
+        "color": "#44ff44",
+        "backgroundColor": "rgba(0, 60, 0, 0.5)",
+        "padding": "2",
+        "borderRadius": 3
+      }
+    },
+    "__id__hud-medkit": {
+      "content": {
+        "fontSize": "11",
+        "color": "#00ff44"
+      }
+    },
+    "__id__hud-nightvision": {
+      "content": {
+        "fontSize": "11",
+        "color": "#44ff44"
+      }
+    },
+    "__id__hud-drone": {
+      "content": {
+        "fontSize": "11",
+        "color": "#00ccff"
+      }
+    },
+    "__id__hud-flare": {
+      "content": {
+        "fontSize": "11",
+        "color": "#ffff44"
+      }
+    },
+    "__id__hud-sandbag": {
+      "content": {
+        "fontSize": "11",
+        "color": "#886644"
+      }
+    },
+    "__id__hud-weapon-pickup": {
+      "content": {
+        "fontSize": "22",
+        "color": "#ffcc00"
+      }
+    },
+    "__id__hud-wave-announce": {
+      "content": {
+        "fontSize": "20",
+        "color": "#ff4400"
+      }
+    },
+    "__id__hud-progress-label": {
+      "content": {
+        "fontSize": "10",
+        "color": "#00ff88"
+      }
+    },
+    "__id__hud-progress-fill": {
+      "content": {
+        "height": "6",
+        "backgroundColor": "#00ff88",
+        "borderRadius": 3
+      }
+    },
+    "__id__hud-boss-label": {
+      "content": {
+        "fontSize": "10",
+        "color": "#ff2200"
+      }
+    },
+    "__id__hud-boss-fill": {
+      "content": {
+        "height": "6",
+        "backgroundColor": "#ff2200",
+        "borderRadius": 3
+      }
+    }
+  },
+  "ranges": {
+    "uid-1": {
+      "start": {
+        "line": 0,
+        "column": 0
+      },
+      "end": {
+        "line": 216,
+        "column": 8
+      }
+    },
+    "top-row": {
+      "start": {
+        "line": 12,
+        "column": 4
+      },
+      "end": {
+        "line": 12,
+        "column": 12
+      }
+    },
+    "hud-item": {
+      "start": {
+        "line": 18,
+        "column": 4
+      },
+      "end": {
+        "line": 18,
+        "column": 13
+      }
+    },
+    "left-group": {
+      "start": {
+        "line": 116,
+        "column": 4
+      },
+      "end": {
+        "line": 116,
+        "column": 15
+      }
+    },
+    "right-group": {
+      "start": {
+        "line": 121,
+        "column": 4
+      },
+      "end": {
+        "line": 121,
+        "column": 16
+      }
+    },
+    "center-group": {
+      "start": {
+        "line": 126,
+        "column": 4
+      },
+      "end": {
+        "line": 126,
+        "column": 17
+      }
+    },
+    "progress-row": {
+      "start": {
+        "line": 135,
+        "column": 4
+      },
+      "end": {
+        "line": 135,
+        "column": 17
+      }
+    },
+    "bar-bg": {
+      "start": {
+        "line": 144,
+        "column": 4
+      },
+      "end": {
+        "line": 144,
+        "column": 11
+      }
+    },
+    "boss-bar-bg": {
+      "start": {
+        "line": 159,
+        "column": 4
+      },
+      "end": {
+        "line": 159,
+        "column": 16
+      }
+    },
+    "__id__root": {
+      "start": {
+        "line": 2,
+        "column": 4
+      },
+      "end": {
+        "line": 2,
+        "column": 9
+      }
+    },
+    "__id__hud-combo": {
+      "start": {
+        "line": 22,
+        "column": 4
+      },
+      "end": {
+        "line": 22,
+        "column": 14
+      }
+    },
+    "__id__hud-weapon": {
+      "start": {
+        "line": 26,
+        "column": 4
+      },
+      "end": {
+        "line": 26,
+        "column": 15
+      }
+    },
+    "__id__hud-shield": {
+      "start": {
+        "line": 30,
+        "column": 4
+      },
+      "end": {
+        "line": 30,
+        "column": 15
+      }
+    },
+    "__id__hud-timer": {
+      "start": {
+        "line": 34,
+        "column": 4
+      },
+      "end": {
+        "line": 34,
+        "column": 14
+      }
+    },
+    "__id__hud-streak": {
+      "start": {
+        "line": 38,
+        "column": 4
+      },
+      "end": {
+        "line": 38,
+        "column": 15
+      }
+    },
+    "__id__hud-achievement": {
+      "start": {
+        "line": 42,
+        "column": 4
+      },
+      "end": {
+        "line": 42,
+        "column": 20
+      }
+    },
+    "__id__hud-upgrade": {
+      "start": {
+        "line": 46,
+        "column": 4
+      },
+      "end": {
+        "line": 46,
+        "column": 16
+      }
+    },
+    "__id__hud-bonus": {
+      "start": {
+        "line": 50,
+        "column": 4
+      },
+      "end": {
+        "line": 50,
+        "column": 14
+      }
+    },
+    "__id__hud-revenge": {
+      "start": {
+        "line": 54,
+        "column": 4
+      },
+      "end": {
+        "line": 54,
+        "column": 16
+      }
+    },
+    "__id__hud-multikill": {
+      "start": {
+        "line": 58,
+        "column": 4
+      },
+      "end": {
+        "line": 58,
+        "column": 18
+      }
+    },
+    "__id__hud-turret": {
+      "start": {
+        "line": 62,
+        "column": 4
+      },
+      "end": {
+        "line": 62,
+        "column": 15
+      }
+    },
+    "__id__hud-decoy": {
+      "start": {
+        "line": 66,
+        "column": 4
+      },
+      "end": {
+        "line": 66,
+        "column": 14
+      }
+    },
+    "__id__hud-radio": {
+      "start": {
+        "line": 70,
+        "column": 4
+      },
+      "end": {
+        "line": 70,
+        "column": 14
+      }
+    },
+    "__id__hud-air-support": {
+      "start": {
+        "line": 77,
+        "column": 4
+      },
+      "end": {
+        "line": 77,
+        "column": 20
+      }
+    },
+    "__id__hud-dogtags": {
+      "start": {
+        "line": 81,
+        "column": 4
+      },
+      "end": {
+        "line": 81,
+        "column": 16
+      }
+    },
+    "__id__hud-cover": {
+      "start": {
+        "line": 85,
+        "column": 4
+      },
+      "end": {
+        "line": 85,
+        "column": 14
+      }
+    },
+    "__id__hud-medkit": {
+      "start": {
+        "line": 92,
+        "column": 4
+      },
+      "end": {
+        "line": 92,
+        "column": 15
+      }
+    },
+    "__id__hud-nightvision": {
+      "start": {
+        "line": 96,
+        "column": 4
+      },
+      "end": {
+        "line": 96,
+        "column": 20
+      }
+    },
+    "__id__hud-drone": {
+      "start": {
+        "line": 100,
+        "column": 4
+      },
+      "end": {
+        "line": 100,
+        "column": 14
+      }
+    },
+    "__id__hud-flare": {
+      "start": {
+        "line": 104,
+        "column": 4
+      },
+      "end": {
+        "line": 104,
+        "column": 14
+      }
+    },
+    "__id__hud-sandbag": {
+      "start": {
+        "line": 108,
+        "column": 4
+      },
+      "end": {
+        "line": 108,
+        "column": 16
+      }
+    },
+    "__id__hud-weapon-pickup": {
+      "start": {
+        "line": 112,
+        "column": 4
+      },
+      "end": {
+        "line": 112,
+        "column": 22
+      }
+    },
+    "__id__hud-wave-announce": {
+      "start": {
+        "line": 131,
+        "column": 4
+      },
+      "end": {
+        "line": 131,
+        "column": 22
+      }
+    },
+    "__id__hud-progress-label": {
+      "start": {
+        "line": 140,
+        "column": 4
+      },
+      "end": {
+        "line": 140,
+        "column": 23
+      }
+    },
+    "__id__hud-progress-fill": {
+      "start": {
+        "line": 150,
+        "column": 4
+      },
+      "end": {
+        "line": 150,
+        "column": 22
+      }
+    },
+    "__id__hud-boss-label": {
+      "start": {
+        "line": 155,
+        "column": 4
+      },
+      "end": {
+        "line": 155,
+        "column": 19
+      }
+    },
+    "__id__hud-boss-fill": {
+      "start": {
+        "line": 165,
+        "column": 4
+      },
+      "end": {
+        "line": 165,
+        "column": 18
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 171,
+        "column": 2
+      },
+      "end": {
+        "line": 215,
+        "column": 8
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 172,
+        "column": 4
+      },
+      "end": {
+        "line": 172,
+        "column": 38
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 173,
+        "column": 4
+      },
+      "end": {
+        "line": 173,
+        "column": 38
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 174,
+        "column": 4
+      },
+      "end": {
+        "line": 205,
+        "column": 10
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 175,
+        "column": 6
+      },
+      "end": {
+        "line": 178,
+        "column": 12
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 176,
+        "column": 8
+      },
+      "end": {
+        "line": 176,
+        "column": 59
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 177,
+        "column": 8
+      },
+      "end": {
+        "line": 177,
+        "column": 56
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 179,
+        "column": 6
+      },
+      "end": {
+        "line": 200,
+        "column": 12
+      }
+    },
+    "uid-10": {
+      "start": {
+        "line": 180,
+        "column": 8
+      },
+      "end": {
+        "line": 180,
+        "column": 34
+      }
+    },
+    "uid-11": {
+      "start": {
+        "line": 181,
+        "column": 8
+      },
+      "end": {
+        "line": 181,
+        "column": 35
+      }
+    },
+    "uid-12": {
+      "start": {
+        "line": 182,
+        "column": 8
+      },
+      "end": {
+        "line": 182,
+        "column": 35
+      }
+    },
+    "uid-13": {
+      "start": {
+        "line": 183,
+        "column": 8
+      },
+      "end": {
+        "line": 183,
+        "column": 35
+      }
+    },
+    "uid-14": {
+      "start": {
+        "line": 184,
+        "column": 8
+      },
+      "end": {
+        "line": 184,
+        "column": 36
+      }
+    },
+    "uid-15": {
+      "start": {
+        "line": 185,
+        "column": 8
+      },
+      "end": {
+        "line": 185,
+        "column": 36
+      }
+    },
+    "uid-16": {
+      "start": {
+        "line": 186,
+        "column": 8
+      },
+      "end": {
+        "line": 186,
+        "column": 38
+      }
+    },
+    "uid-17": {
+      "start": {
+        "line": 187,
+        "column": 8
+      },
+      "end": {
+        "line": 187,
+        "column": 34
+      }
+    },
+    "uid-18": {
+      "start": {
+        "line": 188,
+        "column": 8
+      },
+      "end": {
+        "line": 188,
+        "column": 40
+      }
+    },
+    "uid-19": {
+      "start": {
+        "line": 189,
+        "column": 8
+      },
+      "end": {
+        "line": 189,
+        "column": 34
+      }
+    },
+    "uid-20": {
+      "start": {
+        "line": 190,
+        "column": 8
+      },
+      "end": {
+        "line": 190,
+        "column": 35
+      }
+    },
+    "uid-21": {
+      "start": {
+        "line": 191,
+        "column": 8
+      },
+      "end": {
+        "line": 191,
+        "column": 34
+      }
+    },
+    "uid-22": {
+      "start": {
+        "line": 192,
+        "column": 8
+      },
+      "end": {
+        "line": 192,
+        "column": 40
+      }
+    },
+    "uid-23": {
+      "start": {
+        "line": 193,
+        "column": 8
+      },
+      "end": {
+        "line": 193,
+        "column": 36
+      }
+    },
+    "uid-24": {
+      "start": {
+        "line": 194,
+        "column": 8
+      },
+      "end": {
+        "line": 194,
+        "column": 34
+      }
+    },
+    "uid-25": {
+      "start": {
+        "line": 195,
+        "column": 8
+      },
+      "end": {
+        "line": 195,
+        "column": 35
+      }
+    },
+    "uid-26": {
+      "start": {
+        "line": 196,
+        "column": 8
+      },
+      "end": {
+        "line": 196,
+        "column": 40
+      }
+    },
+    "uid-27": {
+      "start": {
+        "line": 197,
+        "column": 8
+      },
+      "end": {
+        "line": 197,
+        "column": 34
+      }
+    },
+    "uid-28": {
+      "start": {
+        "line": 198,
+        "column": 8
+      },
+      "end": {
+        "line": 198,
+        "column": 34
+      }
+    },
+    "uid-29": {
+      "start": {
+        "line": 199,
+        "column": 8
+      },
+      "end": {
+        "line": 199,
+        "column": 36
+      }
+    },
+    "uid-30": {
+      "start": {
+        "line": 201,
+        "column": 6
+      },
+      "end": {
+        "line": 204,
+        "column": 12
+      }
+    },
+    "uid-31": {
+      "start": {
+        "line": 202,
+        "column": 8
+      },
+      "end": {
+        "line": 202,
+        "column": 59
+      }
+    },
+    "uid-32": {
+      "start": {
+        "line": 203,
+        "column": 8
+      },
+      "end": {
+        "line": 203,
+        "column": 58
+      }
+    },
+    "uid-33": {
+      "start": {
+        "line": 206,
+        "column": 4
+      },
+      "end": {
+        "line": 206,
+        "column": 30
+      }
+    },
+    "uid-34": {
+      "start": {
+        "line": 207,
+        "column": 4
+      },
+      "end": {
+        "line": 210,
+        "column": 10
+      }
+    },
+    "uid-35": {
+      "start": {
+        "line": 208,
+        "column": 6
+      },
+      "end": {
+        "line": 208,
+        "column": 48
+      }
+    },
+    "uid-36": {
+      "start": {
+        "line": 209,
+        "column": 6
+      },
+      "end": {
+        "line": 209,
+        "column": 66
+      }
+    },
+    "uid-37": {
+      "start": {
+        "line": 209,
+        "column": 26
+      },
+      "end": {
+        "line": 209,
+        "column": 60
+      }
+    },
+    "uid-38": {
+      "start": {
+        "line": 211,
+        "column": 4
+      },
+      "end": {
+        "line": 214,
+        "column": 10
+      }
+    },
+    "uid-39": {
+      "start": {
+        "line": 212,
+        "column": 6
+      },
+      "end": {
+        "line": 212,
+        "column": 41
+      }
+    },
+    "uid-40": {
+      "start": {
+        "line": 213,
+        "column": 6
+      },
+      "end": {
+        "line": 213,
+        "column": 67
+      }
+    },
+    "uid-41": {
+      "start": {
+        "line": 213,
+        "column": 31
+      },
+      "end": {
+        "line": 213,
+        "column": 61
+      }
+    }
+  }
+}
