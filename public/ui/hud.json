@@ -210,6 +210,42 @@
                       "id": "hud-medkit"
                     },
                     "dataUid": "uid-25"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-nightvision"
+                    },
+                    "dataUid": "uid-26"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-drone"
+                    },
+                    "dataUid": "uid-27"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-flare"
+                    },
+                    "dataUid": "uid-28"
+                  },
+                  {
+                    "type": "container",
+                    "sourceTag": "div",
+                    "children": [],
+                    "properties": {
+                      "id": "hud-sandbag"
+                    },
+                    "dataUid": "uid-29"
                   }
                 ],
                 "properties": {
@@ -231,7 +267,7 @@
                       "id": "hud-lives",
                       "class": "hud-item"
                     },
-                    "dataUid": "uid-27"
+                    "dataUid": "uid-31"
                   },
                   {
                     "type": "container",
@@ -243,13 +279,13 @@
                       "id": "hud-grenades",
                       "class": "hud-item"
                     },
-                    "dataUid": "uid-28"
+                    "dataUid": "uid-32"
                   }
                 ],
                 "properties": {
                   "class": "right-group"
                 },
-                "dataUid": "uid-26"
+                "dataUid": "uid-30"
               }
             ],
             "properties": {
@@ -264,7 +300,7 @@
             "properties": {
               "id": "hud-radio"
             },
-            "dataUid": "uid-29"
+            "dataUid": "uid-33"
           },
           {
             "type": "container",
@@ -279,7 +315,7 @@
                 "properties": {
                   "id": "hud-progress-label"
                 },
-                "dataUid": "uid-31"
+                "dataUid": "uid-35"
               },
               {
                 "type": "container",
@@ -292,20 +328,20 @@
                     "properties": {
                       "id": "hud-progress-fill"
                     },
-                    "dataUid": "uid-33"
+                    "dataUid": "uid-37"
                   }
                 ],
                 "properties": {
                   "class": "bar-bg"
                 },
-                "dataUid": "uid-32"
+                "dataUid": "uid-36"
               }
             ],
             "properties": {
               "class": "progress-row",
               "id": "hud-wave-progress"
             },
-            "dataUid": "uid-30"
+            "dataUid": "uid-34"
           },
           {
             "type": "container",
@@ -320,7 +356,7 @@
                 "properties": {
                   "id": "hud-boss-label"
                 },
-                "dataUid": "uid-35"
+                "dataUid": "uid-39"
               },
               {
                 "type": "container",
@@ -333,20 +369,20 @@
                     "properties": {
                       "id": "hud-boss-fill"
                     },
-                    "dataUid": "uid-37"
+                    "dataUid": "uid-41"
                   }
                 ],
                 "properties": {
                   "class": "boss-bar-bg"
                 },
-                "dataUid": "uid-36"
+                "dataUid": "uid-40"
               }
             ],
             "properties": {
               "class": "progress-row",
               "id": "hud-boss-progress"
             },
-            "dataUid": "uid-34"
+            "dataUid": "uid-38"
           }
         ],
         "properties": {
@@ -537,6 +573,30 @@
         "color": "#00ff44"
       }
     },
+    "__id__hud-nightvision": {
+      "content": {
+        "fontSize": "11",
+        "color": "#44ff44"
+      }
+    },
+    "__id__hud-drone": {
+      "content": {
+        "fontSize": "11",
+        "color": "#00ccff"
+      }
+    },
+    "__id__hud-flare": {
+      "content": {
+        "fontSize": "11",
+        "color": "#ffff44"
+      }
+    },
+    "__id__hud-sandbag": {
+      "content": {
+        "fontSize": "11",
+        "color": "#886644"
+      }
+    },
     "__id__hud-weapon-pickup": {
       "content": {
         "fontSize": "22",
@@ -583,7 +643,7 @@
         "column": 0
       },
       "end": {
-        "line": 196,
+        "line": 216,
         "column": 8
       }
     },
@@ -609,61 +669,61 @@
     },
     "left-group": {
       "start": {
-        "line": 100,
+        "line": 116,
         "column": 4
       },
       "end": {
-        "line": 100,
+        "line": 116,
         "column": 15
       }
     },
     "right-group": {
       "start": {
-        "line": 105,
+        "line": 121,
         "column": 4
       },
       "end": {
-        "line": 105,
+        "line": 121,
         "column": 16
       }
     },
     "center-group": {
       "start": {
-        "line": 110,
+        "line": 126,
         "column": 4
       },
       "end": {
-        "line": 110,
+        "line": 126,
         "column": 17
       }
     },
     "progress-row": {
       "start": {
-        "line": 119,
+        "line": 135,
         "column": 4
       },
       "end": {
-        "line": 119,
+        "line": 135,
         "column": 17
       }
     },
     "bar-bg": {
       "start": {
-        "line": 128,
+        "line": 144,
         "column": 4
       },
       "end": {
-        "line": 128,
+        "line": 144,
         "column": 11
       }
     },
     "boss-bar-bg": {
       "start": {
-        "line": 143,
+        "line": 159,
         "column": 4
       },
       "end": {
-        "line": 143,
+        "line": 159,
         "column": 16
       }
     },
@@ -847,423 +907,503 @@
         "column": 15
       }
     },
-    "__id__hud-weapon-pickup": {
+    "__id__hud-nightvision": {
       "start": {
         "line": 96,
         "column": 4
       },
       "end": {
         "line": 96,
+        "column": 20
+      }
+    },
+    "__id__hud-drone": {
+      "start": {
+        "line": 100,
+        "column": 4
+      },
+      "end": {
+        "line": 100,
+        "column": 14
+      }
+    },
+    "__id__hud-flare": {
+      "start": {
+        "line": 104,
+        "column": 4
+      },
+      "end": {
+        "line": 104,
+        "column": 14
+      }
+    },
+    "__id__hud-sandbag": {
+      "start": {
+        "line": 108,
+        "column": 4
+      },
+      "end": {
+        "line": 108,
+        "column": 16
+      }
+    },
+    "__id__hud-weapon-pickup": {
+      "start": {
+        "line": 112,
+        "column": 4
+      },
+      "end": {
+        "line": 112,
         "column": 22
       }
     },
     "__id__hud-wave-announce": {
       "start": {
-        "line": 115,
+        "line": 131,
         "column": 4
       },
       "end": {
-        "line": 115,
+        "line": 131,
         "column": 22
       }
     },
     "__id__hud-progress-label": {
       "start": {
-        "line": 124,
+        "line": 140,
         "column": 4
       },
       "end": {
-        "line": 124,
+        "line": 140,
         "column": 23
       }
     },
     "__id__hud-progress-fill": {
       "start": {
-        "line": 134,
+        "line": 150,
         "column": 4
       },
       "end": {
-        "line": 134,
+        "line": 150,
         "column": 22
       }
     },
     "__id__hud-boss-label": {
       "start": {
-        "line": 139,
+        "line": 155,
         "column": 4
       },
       "end": {
-        "line": 139,
+        "line": 155,
         "column": 19
       }
     },
     "__id__hud-boss-fill": {
       "start": {
-        "line": 149,
+        "line": 165,
         "column": 4
       },
       "end": {
-        "line": 149,
+        "line": 165,
         "column": 18
       }
     },
     "uid-2": {
       "start": {
-        "line": 155,
+        "line": 171,
         "column": 2
       },
       "end": {
-        "line": 195,
+        "line": 215,
         "column": 8
       }
     },
     "uid-3": {
       "start": {
-        "line": 156,
+        "line": 172,
         "column": 4
       },
       "end": {
-        "line": 156,
+        "line": 172,
         "column": 38
       }
     },
     "uid-4": {
       "start": {
-        "line": 157,
+        "line": 173,
         "column": 4
       },
       "end": {
-        "line": 157,
+        "line": 173,
         "column": 38
       }
     },
     "uid-5": {
       "start": {
-        "line": 158,
+        "line": 174,
         "column": 4
       },
       "end": {
-        "line": 185,
+        "line": 205,
         "column": 10
       }
     },
     "uid-6": {
       "start": {
-        "line": 159,
+        "line": 175,
         "column": 6
       },
       "end": {
-        "line": 162,
+        "line": 178,
         "column": 12
       }
     },
     "uid-7": {
       "start": {
-        "line": 160,
+        "line": 176,
         "column": 8
       },
       "end": {
-        "line": 160,
+        "line": 176,
         "column": 59
       }
     },
     "uid-8": {
       "start": {
-        "line": 161,
+        "line": 177,
         "column": 8
       },
       "end": {
-        "line": 161,
+        "line": 177,
         "column": 56
       }
     },
     "uid-9": {
       "start": {
-        "line": 163,
+        "line": 179,
         "column": 6
       },
       "end": {
-        "line": 180,
+        "line": 200,
         "column": 12
       }
     },
     "uid-10": {
       "start": {
-        "line": 164,
+        "line": 180,
         "column": 8
       },
       "end": {
-        "line": 164,
+        "line": 180,
         "column": 34
       }
     },
     "uid-11": {
       "start": {
-        "line": 165,
+        "line": 181,
         "column": 8
       },
       "end": {
-        "line": 165,
+        "line": 181,
         "column": 35
       }
     },
     "uid-12": {
       "start": {
-        "line": 166,
+        "line": 182,
         "column": 8
       },
       "end": {
-        "line": 166,
+        "line": 182,
         "column": 35
       }
     },
     "uid-13": {
       "start": {
-        "line": 167,
+        "line": 183,
         "column": 8
       },
       "end": {
-        "line": 167,
+        "line": 183,
         "column": 35
       }
     },
     "uid-14": {
       "start": {
-        "line": 168,
+        "line": 184,
         "column": 8
       },
       "end": {
-        "line": 168,
+        "line": 184,
         "column": 36
       }
     },
     "uid-15": {
       "start": {
-        "line": 169,
+        "line": 185,
         "column": 8
       },
       "end": {
-        "line": 169,
+        "line": 185,
         "column": 36
       }
     },
     "uid-16": {
       "start": {
-        "line": 170,
+        "line": 186,
         "column": 8
       },
       "end": {
-        "line": 170,
+        "line": 186,
         "column": 38
       }
     },
     "uid-17": {
       "start": {
-        "line": 171,
+        "line": 187,
         "column": 8
       },
       "end": {
-        "line": 171,
+        "line": 187,
         "column": 34
       }
     },
     "uid-18": {
       "start": {
-        "line": 172,
+        "line": 188,
         "column": 8
       },
       "end": {
-        "line": 172,
+        "line": 188,
         "column": 40
       }
     },
     "uid-19": {
       "start": {
-        "line": 173,
+        "line": 189,
         "column": 8
       },
       "end": {
-        "line": 173,
+        "line": 189,
         "column": 34
       }
     },
     "uid-20": {
       "start": {
-        "line": 174,
+        "line": 190,
         "column": 8
       },
       "end": {
-        "line": 174,
+        "line": 190,
         "column": 35
       }
     },
     "uid-21": {
       "start": {
-        "line": 175,
+        "line": 191,
         "column": 8
       },
       "end": {
-        "line": 175,
+        "line": 191,
         "column": 34
       }
     },
     "uid-22": {
       "start": {
-        "line": 176,
+        "line": 192,
         "column": 8
       },
       "end": {
-        "line": 176,
+        "line": 192,
         "column": 40
       }
     },
     "uid-23": {
       "start": {
-        "line": 177,
+        "line": 193,
         "column": 8
       },
       "end": {
-        "line": 177,
+        "line": 193,
         "column": 36
       }
     },
     "uid-24": {
       "start": {
-        "line": 178,
+        "line": 194,
         "column": 8
       },
       "end": {
-        "line": 178,
+        "line": 194,
         "column": 34
       }
     },
     "uid-25": {
       "start": {
-        "line": 179,
+        "line": 195,
         "column": 8
       },
       "end": {
-        "line": 179,
+        "line": 195,
         "column": 35
       }
     },
     "uid-26": {
       "start": {
-        "line": 181,
-        "column": 6
+        "line": 196,
+        "column": 8
       },
       "end": {
-        "line": 184,
-        "column": 12
+        "line": 196,
+        "column": 40
       }
     },
     "uid-27": {
       "start": {
-        "line": 182,
+        "line": 197,
         "column": 8
       },
       "end": {
-        "line": 182,
-        "column": 59
+        "line": 197,
+        "column": 34
       }
     },
     "uid-28": {
       "start": {
-        "line": 183,
+        "line": 198,
         "column": 8
       },
       "end": {
-        "line": 183,
-        "column": 58
+        "line": 198,
+        "column": 34
       }
     },
     "uid-29": {
       "start": {
-        "line": 186,
-        "column": 4
+        "line": 199,
+        "column": 8
       },
       "end": {
-        "line": 186,
-        "column": 30
+        "line": 199,
+        "column": 36
       }
     },
     "uid-30": {
       "start": {
-        "line": 187,
-        "column": 4
+        "line": 201,
+        "column": 6
       },
       "end": {
-        "line": 190,
-        "column": 10
+        "line": 204,
+        "column": 12
       }
     },
     "uid-31": {
       "start": {
-        "line": 188,
-        "column": 6
+        "line": 202,
+        "column": 8
       },
       "end": {
-        "line": 188,
-        "column": 48
+        "line": 202,
+        "column": 59
       }
     },
     "uid-32": {
       "start": {
-        "line": 189,
-        "column": 6
+        "line": 203,
+        "column": 8
       },
       "end": {
-        "line": 189,
-        "column": 66
+        "line": 203,
+        "column": 58
       }
     },
     "uid-33": {
       "start": {
-        "line": 189,
-        "column": 26
+        "line": 206,
+        "column": 4
       },
       "end": {
-        "line": 189,
-        "column": 60
+        "line": 206,
+        "column": 30
       }
     },
     "uid-34": {
       "start": {
-        "line": 191,
+        "line": 207,
         "column": 4
       },
       "end": {
-        "line": 194,
+        "line": 210,
         "column": 10
       }
     },
     "uid-35": {
       "start": {
-        "line": 192,
+        "line": 208,
         "column": 6
       },
       "end": {
-        "line": 192,
-        "column": 41
+        "line": 208,
+        "column": 48
       }
     },
     "uid-36": {
       "start": {
-        "line": 193,
+        "line": 209,
         "column": 6
       },
       "end": {
-        "line": 193,
-        "column": 67
+        "line": 209,
+        "column": 66
       }
     },
     "uid-37": {
       "start": {
-        "line": 193,
+        "line": 209,
+        "column": 26
+      },
+      "end": {
+        "line": 209,
+        "column": 60
+      }
+    },
+    "uid-38": {
+      "start": {
+        "line": 211,
+        "column": 4
+      },
+      "end": {
+        "line": 214,
+        "column": 10
+      }
+    },
+    "uid-39": {
+      "start": {
+        "line": 212,
+        "column": 6
+      },
+      "end": {
+        "line": 212,
+        "column": 41
+      }
+    },
+    "uid-40": {
+      "start": {
+        "line": 213,
+        "column": 6
+      },
+      "end": {
+        "line": 213,
+        "column": 67
+      }
+    },
+    "uid-41": {
+      "start": {
+        "line": 213,
         "column": 31
       },
       "end": {
-        "line": 193,
+        "line": 213,
         "column": 61
       }
     }

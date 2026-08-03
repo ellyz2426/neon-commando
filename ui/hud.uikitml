@@ -94,6 +94,22 @@
       font-size: 11;
       color: #00ff44;
     }
+    #hud-nightvision {
+      font-size: 11;
+      color: #44ff44;
+    }
+    #hud-drone {
+      font-size: 11;
+      color: #00ccff;
+    }
+    #hud-flare {
+      font-size: 11;
+      color: #ffff44;
+    }
+    #hud-sandbag {
+      font-size: 11;
+      color: #886644;
+    }
     #hud-weapon-pickup {
       font-size: 22;
       color: #ffcc00;
@@ -178,6 +194,10 @@
         <div id="hud-dogtags"></div>
         <div id="hud-cover"></div>
         <div id="hud-medkit"></div>
+        <div id="hud-nightvision"></div>
+        <div id="hud-drone"></div>
+        <div id="hud-flare"></div>
+        <div id="hud-sandbag"></div>
       </div>
       <div class="right-group">
         <div id="hud-lives" class="hud-item">Lives: 3</div>

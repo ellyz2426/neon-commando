@@ -46,6 +46,10 @@
     <div id="stat-apckills" class="stat-row">APCs Destroyed: 0</div>
     <div id="stat-medkits" class="stat-row">Medkits Deployed: 0</div>
     <div id="stat-radiokills" class="stat-row">Radio Ops Killed: 0</div>
+    <div id="stat-nightvision" class="stat-row">Night Vision Uses: 0</div>
+    <div id="stat-drones" class="stat-row">Drones Deployed: 0</div>
+    <div id="stat-flares" class="stat-row">Flares Launched: 0</div>
+    <div id="stat-sandbags" class="stat-row">Sandbags Placed: 0</div>
     <div id="btn-close-stats" class="close-btn">Close</div>
   </div>
 </panel>

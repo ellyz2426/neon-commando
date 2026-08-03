@@ -50,6 +50,10 @@
     <div class="control-row">F: Mount/Dismount Turret</div>
     <div class="control-row">Tab: Cycle Weapon</div>
     <div class="control-row">Shift: Dodge Roll</div>
+    <div class="control-row">N: Night Vision</div>
+    <div class="control-row">V: Deploy Drone</div>
+    <div class="control-row">T: Launch Flare</div>
+    <div class="control-row">B: Place Sandbag</div>
     <div class="control-row">Numpad: Aim Direction</div>
     <div class="control-row">Esc / P: Pause</div>
     <div class="section">-- VR CONTROLLERS --</div>
@@ -70,6 +74,10 @@
     <div class="control-row">Stay near walls/sandbags for cover</div>
     <div class="control-row">Deploy medkits for heal-over-time</div>
     <div class="control-row">Kill radio operators before they call backup!</div>
+    <div class="control-row">N: Night vision highlights all enemies</div>
+    <div class="control-row">V: Drone scouts reveal enemy positions</div>
+    <div class="control-row">T: Flares slow enemies in range</div>
+    <div class="control-row">B: Place sandbag walls for bullet cover</div>
     <div class="control-row">Chain kills for combo multiplier</div>
     <div id="btn-close-tutorial" class="close-btn">Close</div>
   </div>

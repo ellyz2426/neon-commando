@@ -452,6 +452,10 @@ export class UISystem extends createSystem({
     setText(this.statsDoc, 'stat-apckills', `APCs Destroyed: ${s.careerAPCKills}`);
     setText(this.statsDoc, 'stat-medkits', `Medkits Deployed: ${s.careerMedkitsDeployed}`);
     setText(this.statsDoc, 'stat-radiokills', `Radio Ops Killed: ${s.careerRadioOpsKilled}`);
+    setText(this.statsDoc, 'stat-nightvision', `Night Vision Uses: ${s.careerNightVision}`);
+    setText(this.statsDoc, 'stat-drones', `Drones Deployed: ${s.careerDrones}`);
+    setText(this.statsDoc, 'stat-flares', `Flares Launched: ${s.careerFlares}`);
+    setText(this.statsDoc, 'stat-sandbags', `Sandbags Placed: ${s.careerSandbags}`);
     setText(this.statsDoc, 'stat-highscore', `High Score: ${s.highScore}`);
     setText(this.statsDoc, 'stat-missions', `Missions: ${s.careerMissions}`);
     setText(this.statsDoc, 'stat-vehicles', `Vehicles Used: ${s.careerVehiclesUsed}`);
@@ -783,6 +787,56 @@ export class UISystem extends createSystem({
       }
     } else {
       setText(this.hudDoc, 'hud-medkit', '');
+    }
+
+    // Night vision HUD
+    if (s.nightVisionActive) {
+      setText(this.hudDoc, 'hud-nightvision', `🌙 NV ACTIVE [${Math.ceil(s.nightVisionTimer)}s]`);
+    } else if (s.nightVisionCharges > 0) {
+      if (s.nightVisionCooldown > 0) {
+        setText(this.hudDoc, 'hud-nightvision', `N: NV [${s.nightVisionCharges}] (${Math.ceil(s.nightVisionCooldown)}s)`);
+      } else {
+        setText(this.hudDoc, 'hud-nightvision', `N: Night Vision [${s.nightVisionCharges}]`);
+      }
+    } else {
+      setText(this.hudDoc, 'hud-nightvision', '');
+    }
+
+    // Drone HUD
+    if (s.droneActive) {
+      setText(this.hudDoc, 'hud-drone', `📡 DRONE ACTIVE [${Math.ceil(s.droneTimer)}s]`);
+    } else if (s.droneCharges > 0) {
+      if (s.droneCooldown > 0) {
+        setText(this.hudDoc, 'hud-drone', `V: Drone [${s.droneCharges}] (${Math.ceil(s.droneCooldown)}s)`);
+      } else {
+        setText(this.hudDoc, 'hud-drone', `V: Deploy Drone [${s.droneCharges}]`);
+      }
+    } else {
+      setText(this.hudDoc, 'hud-drone', '');
+    }
+
+    // Flare HUD
+    if (s.flareActive) {
+      setText(this.hudDoc, 'hud-flare', '☀ FLARE ACTIVE');
+    } else if (s.flareCharges > 0) {
+      if (s.flareCooldown > 0) {
+        setText(this.hudDoc, 'hud-flare', `T: Flare [${s.flareCharges}] (${Math.ceil(s.flareCooldown)}s)`);
+      } else {
+        setText(this.hudDoc, 'hud-flare', `T: Launch Flare [${s.flareCharges}]`);
+      }
+    } else {
+      setText(this.hudDoc, 'hud-flare', '');
+    }
+
+    // Sandbag HUD
+    if (s.sandbagCharges > 0) {
+      if (s.sandbagCooldown > 0) {
+        setText(this.hudDoc, 'hud-sandbag', `B: Sandbag [${s.sandbagCharges}] (${Math.ceil(s.sandbagCooldown)}s)`);
+      } else {
+        setText(this.hudDoc, 'hud-sandbag', `B: Deploy Sandbag [${s.sandbagCharges}]`);
+      }
+    } else {
+      setText(this.hudDoc, 'hud-sandbag', '');
     }
   }
 

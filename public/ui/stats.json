@@ -166,13 +166,61 @@
             "type": "container",
             "sourceTag": "div",
             "children": [
+              "Night Vision Uses: 0"
+            ],
+            "properties": {
+              "id": "stat-nightvision",
+              "class": "stat-row"
+            },
+            "dataUid": "uid-16"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Drones Deployed: 0"
+            ],
+            "properties": {
+              "id": "stat-drones",
+              "class": "stat-row"
+            },
+            "dataUid": "uid-17"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Flares Launched: 0"
+            ],
+            "properties": {
+              "id": "stat-flares",
+              "class": "stat-row"
+            },
+            "dataUid": "uid-18"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
+              "Sandbags Placed: 0"
+            ],
+            "properties": {
+              "id": "stat-sandbags",
+              "class": "stat-row"
+            },
+            "dataUid": "uid-19"
+          },
+          {
+            "type": "container",
+            "sourceTag": "div",
+            "children": [
               "Close"
             ],
             "properties": {
               "id": "btn-close-stats",
               "class": "close-btn"
             },
-            "dataUid": "uid-16"
+            "dataUid": "uid-20"
           }
         ],
         "properties": {
@@ -232,7 +280,7 @@
         "column": 0
       },
       "end": {
-        "line": 50,
+        "line": 54,
         "column": 8
       }
     },
@@ -282,7 +330,7 @@
         "column": 2
       },
       "end": {
-        "line": 49,
+        "line": 53,
         "column": 8
       }
     },
@@ -423,6 +471,46 @@
       },
       "end": {
         "line": 48,
+        "column": 74
+      }
+    },
+    "uid-17": {
+      "start": {
+        "line": 49,
+        "column": 4
+      },
+      "end": {
+        "line": 49,
+        "column": 67
+      }
+    },
+    "uid-18": {
+      "start": {
+        "line": 50,
+        "column": 4
+      },
+      "end": {
+        "line": 50,
+        "column": 67
+      }
+    },
+    "uid-19": {
+      "start": {
+        "line": 51,
+        "column": 4
+      },
+      "end": {
+        "line": 51,
+        "column": 69
+      }
+    },
+    "uid-20": {
+      "start": {
+        "line": 52,
+        "column": 4
+      },
+      "end": {
+        "line": 52,
         "column": 59
       }
     }

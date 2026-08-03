@@ -329,6 +329,37 @@ interface Medkit {
   pulseTimer: number;
 }
 
+interface NightVisionState {
+  mesh: Mesh | null;
+}
+
+interface Drone {
+  mesh: Group;
+  x: number;
+  z: number;
+  y: number;
+  timer: number;
+  angle: number;
+}
+
+interface Flare {
+  mesh: Group;
+  light: PointLight;
+  x: number;
+  z: number;
+  y: number;
+  timer: number;
+  particles: Mesh[];
+}
+
+interface Sandbag {
+  mesh: Group;
+  x: number;
+  z: number;
+  hp: number;
+  angle: number;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -481,6 +512,27 @@ export interface GameState {
   // Radio operator tracking
   careerRadioOpsKilled: number;
   reinforcementsCalled: number;
+  // Night vision
+  nightVisionActive: boolean;
+  nightVisionTimer: number;
+  nightVisionCooldown: number;
+  nightVisionCharges: number;
+  // Drone recon
+  droneActive: boolean;
+  droneCooldown: number;
+  droneCharges: number;
+  droneTimer: number;
+  // Flare system
+  flareActive: boolean;
+  flareCooldown: number;
+  flareCharges: number;
+  // Sandbag fortification
+  sandbagCharges: number;
+  sandbagCooldown: number;
+  careerSandbags: number;
+  careerFlares: number;
+  careerDrones: number;
+  careerNightVision: number;
 }
 
 // ── Constants ──
@@ -562,6 +614,12 @@ export class GameSystem extends createSystem({}) {
   private radioChatterQueue: string[] = [];
   private airStrikes: AirStrike[] = [];
   private medkits: Medkit[] = [];
+  private nightVisionOverlay: NightVisionState = { mesh: null };
+  private drones: Drone[] = [];
+  private flares: Flare[] = [];
+  private sandbags: Sandbag[] = [];
+  private savedAmbientIntensity = 0.6;
+  private savedFogDensity = 0.04;
 
   init() {
     this.state = this.createDefaultState();
@@ -693,6 +751,23 @@ export class GameSystem extends createSystem({}) {
       careerMedkitsDeployed: 0,
       careerRadioOpsKilled: 0,
       reinforcementsCalled: 0,
+      nightVisionActive: false,
+      nightVisionTimer: 0,
+      nightVisionCooldown: 0,
+      nightVisionCharges: 3,
+      droneActive: false,
+      droneCooldown: 0,
+      droneCharges: 2,
+      droneTimer: 0,
+      flareActive: false,
+      flareCooldown: 0,
+      flareCharges: 3,
+      sandbagCharges: 2,
+      sandbagCooldown: 0,
+      careerSandbags: 0,
+      careerFlares: 0,
+      careerDrones: 0,
+      careerNightVision: 0,
     };
   }
 
@@ -724,6 +799,10 @@ export class GameSystem extends createSystem({}) {
         this.state.careerAPCKills = s.careerAPCKills || 0;
         this.state.careerMedkitsDeployed = s.careerMedkitsDeployed || 0;
         this.state.careerRadioOpsKilled = s.careerRadioOpsKilled || 0;
+        this.state.careerSandbags = s.careerSandbags || 0;
+        this.state.careerFlares = s.careerFlares || 0;
+        this.state.careerDrones = s.careerDrones || 0;
+        this.state.careerNightVision = s.careerNightVision || 0;
       }
       const settings = localStorage.getItem('neon-commando-settings');
       if (settings) {
@@ -771,6 +850,10 @@ export class GameSystem extends createSystem({}) {
         careerAPCKills: this.state.careerAPCKills,
         careerMedkitsDeployed: this.state.careerMedkitsDeployed,
         careerRadioOpsKilled: this.state.careerRadioOpsKilled,
+        careerSandbags: this.state.careerSandbags,
+        careerFlares: this.state.careerFlares,
+        careerDrones: this.state.careerDrones,
+        careerNightVision: this.state.careerNightVision,
       }));
       this.addToLeaderboard(this.state.score, this.state.wave);
       this.checkScoreAchievements();
@@ -2525,6 +2608,20 @@ export class GameSystem extends createSystem({}) {
     s.medkitCharges = 2;
     s.medkitCooldown = 0;
     s.reinforcementsCalled = 0;
+    // Reset round 15 abilities
+    s.nightVisionActive = false;
+    s.nightVisionTimer = 0;
+    s.nightVisionCooldown = 0;
+    s.nightVisionCharges = 3;
+    s.droneActive = false;
+    s.droneCooldown = 0;
+    s.droneCharges = 2;
+    s.droneTimer = 0;
+    s.flareActive = false;
+    s.flareCooldown = 0;
+    s.flareCharges = 3;
+    s.sandbagCharges = 2;
+    s.sandbagCooldown = 0;
     s.rollTimer = 0;
     s.rollCooldown = 0;
     s.rollDirX = 0;
@@ -2626,6 +2723,17 @@ export class GameSystem extends createSystem({}) {
     this.clearDecoys();
     for (const mk of this.medkits) this.world.scene.remove(mk.mesh);
     this.medkits = [];
+    // Clean up round 15 objects
+    if (this.nightVisionOverlay.mesh) {
+      this.world.camera.remove(this.nightVisionOverlay.mesh);
+    }
+    if (this.state.nightVisionActive) this.disableNightVision();
+    for (const d of this.drones) this.world.scene.remove(d.mesh);
+    this.drones = [];
+    for (const f of this.flares) this.world.scene.remove(f.mesh);
+    this.flares = [];
+    for (const sb of this.sandbags) this.world.scene.remove(sb.mesh);
+    this.sandbags = [];
   }
 
   // ── Vehicle System ──
@@ -3676,6 +3784,10 @@ export class GameSystem extends createSystem({}) {
       this.updateAirStrikes(dt);
       this.updateCoverSystem(dt);
       this.updateMedkits(dt);
+      this.updateNightVision(dt);
+      this.updateDrones(dt);
+      this.updateFlares(dt);
+      this.updateSandbags(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -3727,6 +3839,15 @@ export class GameSystem extends createSystem({}) {
     // Dodge roll: Shift key
     let rollTrigger = false;
     if (kb.getKeyDown('ShiftLeft') || kb.getKeyDown('ShiftRight')) rollTrigger = true;
+    // New round 15 abilities
+    let nightVisionTrigger = false;
+    if (kb.getKeyDown('KeyN')) nightVisionTrigger = true;
+    let droneTrigger = false;
+    if (kb.getKeyDown('KeyV')) droneTrigger = true;
+    let flareTrigger = false;
+    if (kb.getKeyDown('KeyT')) flareTrigger = true;
+    let sandbagTrigger = false;
+    if (kb.getKeyDown('KeyB')) sandbagTrigger = true;
     if (kb.getKeyDown('Escape') || kb.getKeyDown('KeyP')) {
       s.phase = 'paused';
       return;
@@ -3905,6 +4026,23 @@ export class GameSystem extends createSystem({}) {
       this.deployMedkit();
     }
 
+    // Night vision toggle
+    if (nightVisionTrigger) {
+      this.toggleNightVision();
+    }
+    // Drone recon
+    if (droneTrigger) {
+      this.deployDrone();
+    }
+    // Flare
+    if (flareTrigger) {
+      this.launchFlare();
+    }
+    // Sandbag fortification
+    if (sandbagTrigger) {
+      this.deploySandbag();
+    }
+
     // Turret mount/dismount
     if (turretToggle) {
       if (s.inTurret) {
@@ -4005,6 +4143,12 @@ export class GameSystem extends createSystem({}) {
       }
 
       if (b.isEnemy) {
+        // Check if bullet hits a player-placed sandbag first
+        if (this.checkSandbagHit(b.mesh.position.x, b.mesh.position.z)) {
+          this.world.scene.remove(b.mesh);
+          this.bullets.splice(i, 1);
+          continue;
+        }
         // Hit player
         const dx = b.mesh.position.x - s.playerX;
         const dz = b.mesh.position.z - s.playerZ;
@@ -4544,6 +4688,22 @@ export class GameSystem extends createSystem({}) {
           // Refill medkit charge (50% chance, max 3)
           if (Math.random() < 0.5 && s.medkitCharges < 3) {
             s.medkitCharges++;
+          }
+          // Refill night vision (20% chance)
+          if (Math.random() < 0.2 && s.nightVisionCharges < 3) {
+            s.nightVisionCharges++;
+          }
+          // Refill drone charges (15% chance)
+          if (Math.random() < 0.15 && s.droneCharges < 2) {
+            s.droneCharges++;
+          }
+          // Refill sandbag charges (25% chance)
+          if (Math.random() < 0.25 && s.sandbagCharges < 3) {
+            s.sandbagCharges++;
+          }
+          // Refill flare charges (20% chance)
+          if (Math.random() < 0.2 && s.flareCharges < 3) {
+            s.flareCharges++;
           }
           this.world.scene.remove(crate.mesh);
           this.supplyCrates.splice(i, 1);
@@ -5893,6 +6053,367 @@ export class GameSystem extends createSystem({}) {
         }
       }
     }
+  }
+
+  // ── Night Vision System ──
+  private toggleNightVision() {
+    const s = this.state;
+    if (s.nightVisionActive) return; // already on
+    if (s.nightVisionCharges <= 0 || s.nightVisionCooldown > 0) return;
+    s.nightVisionCharges--;
+    s.nightVisionActive = true;
+    s.nightVisionTimer = 15; // 15-second duration
+    s.careerNightVision++;
+    // Create green overlay sphere around camera
+    if (!this.nightVisionOverlay.mesh) {
+      const geo = new SphereGeometry(2, 16, 16);
+      const mat = new MeshBasicMaterial({
+        color: new Color(0x00ff00),
+        transparent: true,
+        opacity: 0.08,
+        side: BackSide,
+        depthWrite: false,
+      });
+      this.nightVisionOverlay.mesh = new Mesh(geo, mat);
+      this.nightVisionOverlay.mesh.renderOrder = 999;
+    }
+    this.world.camera.add(this.nightVisionOverlay.mesh);
+    this.nightVisionOverlay.mesh.position.set(0, 0, 0);
+    // Darken scene
+    this.world.scene.traverse((obj: any) => {
+      if (obj.isAmbientLight) {
+        this.savedAmbientIntensity = obj.intensity;
+        obj.intensity = 0.05;
+      }
+    });
+    const fog = this.world.scene.fog as FogExp2 | null;
+    if (fog && 'density' in fog) {
+      this.savedFogDensity = fog.density;
+      fog.density = fog.density * 2;
+    }
+    // Make enemies glow green
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      e.mesh.traverse((c: any) => {
+        if (c.material && c.material.emissive) {
+          c.material.emissive = new Color(0x00ff00);
+          c.material.emissiveIntensity = 0.8;
+        }
+      });
+    }
+    this.triggerRadioChatter('NIGHT VISION ENGAGED — hostiles highlighted.');
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private disableNightVision() {
+    const s = this.state;
+    s.nightVisionActive = false;
+    s.nightVisionCooldown = 30; // 30-second cooldown
+    // Remove overlay
+    if (this.nightVisionOverlay.mesh) {
+      this.world.camera.remove(this.nightVisionOverlay.mesh);
+    }
+    // Restore ambient
+    this.world.scene.traverse((obj: any) => {
+      if (obj.isAmbientLight) {
+        obj.intensity = this.savedAmbientIntensity;
+      }
+    });
+    const fog = this.world.scene.fog as FogExp2 | null;
+    if (fog && 'density' in fog) {
+      fog.density = this.savedFogDensity;
+    }
+    // Remove enemy glow
+    for (const e of this.enemies) {
+      e.mesh.traverse((c: any) => {
+        if (c.material && c.material.emissive) {
+          c.material.emissiveIntensity = 0;
+        }
+      });
+    }
+  }
+
+  private updateNightVision(dt: number) {
+    const s = this.state;
+    if (s.nightVisionCooldown > 0) s.nightVisionCooldown -= dt;
+    if (!s.nightVisionActive) return;
+    s.nightVisionTimer -= dt;
+    if (s.nightVisionTimer <= 0) {
+      this.disableNightVision();
+      this.triggerRadioChatter('Night vision depleted.');
+    }
+    // Pulse overlay opacity
+    if (this.nightVisionOverlay.mesh) {
+      const mat = this.nightVisionOverlay.mesh.material as MeshBasicMaterial;
+      mat.opacity = 0.06 + Math.sin(s.nightVisionTimer * 4) * 0.02;
+    }
+    // Apply green emissive to newly spawned enemies
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      e.mesh.traverse((c: any) => {
+        if (c.material && c.material.emissive && c.material.emissiveIntensity < 0.5) {
+          c.material.emissive = new Color(0x00ff00);
+          c.material.emissiveIntensity = 0.8;
+        }
+      });
+    }
+  }
+
+  // ── Drone Recon System ──
+  private deployDrone() {
+    const s = this.state;
+    if (s.droneActive || s.droneCharges <= 0 || s.droneCooldown > 0 || s.inVehicle || s.inTurret) return;
+    s.droneCharges--;
+    s.droneActive = true;
+    s.droneTimer = 10; // 10-second duration
+    s.careerDrones++;
+    const group = new Group();
+    // Quad frame
+    const frameMat = new MeshStandardMaterial({ color: new Color(0x00ccff), emissive: new Color(0x00ccff), emissiveIntensity: 0.6, wireframe: true });
+    const frame = new Mesh(new BoxGeometry(0.6, 0.08, 0.6), frameMat);
+    group.add(frame);
+    // 4 rotors
+    for (let i = 0; i < 4; i++) {
+      const rotor = new Mesh(new CylinderGeometry(0.15, 0.15, 0.02, 8), frameMat);
+      const ox = (i < 2 ? -0.25 : 0.25);
+      const oz = (i % 2 === 0 ? -0.25 : 0.25);
+      rotor.position.set(ox, 0.06, oz);
+      rotor.name = 'rotor' + i;
+      group.add(rotor);
+    }
+    // Indicator ring
+    const ring = new Mesh(new RingGeometry(0.1, 0.14, 8), new MeshBasicMaterial({ color: new Color(0x00ffff), transparent: true, opacity: 0.6, side: DoubleSide }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -0.05;
+    group.add(ring);
+    group.position.set(s.playerX, 6, s.playerZ);
+    this.world.scene.add(group);
+    this.drones.push({
+      mesh: group,
+      x: s.playerX,
+      z: s.playerZ,
+      y: 6,
+      timer: 10,
+      angle: 0,
+    });
+    this.triggerRadioChatter('DRONE DEPLOYED — scanning hostile positions.');
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private updateDrones(dt: number) {
+    const s = this.state;
+    if (s.droneCooldown > 0) s.droneCooldown -= dt;
+    for (let i = this.drones.length - 1; i >= 0; i--) {
+      const d = this.drones[i];
+      d.timer -= dt;
+      d.angle += dt * 2;
+      // Circle around player
+      const radius = 3;
+      d.x = s.playerX + Math.cos(d.angle) * radius;
+      d.z = s.playerZ + Math.sin(d.angle) * radius;
+      d.mesh.position.set(d.x, d.y, d.z);
+      d.mesh.rotation.y = d.angle;
+      // Spin rotors
+      d.mesh.children.forEach((c: any) => {
+        if (c.name && c.name.startsWith('rotor')) {
+          c.rotation.y += dt * 30;
+        }
+      });
+      // Mark high-value targets on ground
+      let marked = 0;
+      for (const e of this.enemies) {
+        if (e.dead || marked >= 3) break;
+        if (e.type === 'boss' || e.type === 'tank' || e.type === 'apc' || e.type === 'officer' || e.type === 'helicopter') {
+          marked++;
+        }
+      }
+      if (d.timer <= 0) {
+        // Remove drone
+        this.world.scene.remove(d.mesh);
+        this.drones.splice(i, 1);
+        s.droneActive = false;
+        s.droneCooldown = 60; // 60-second cooldown
+        this.triggerRadioChatter('Drone returning to base.');
+      }
+    }
+  }
+
+  // ── Flare System ──
+  private launchFlare() {
+    const s = this.state;
+    if (s.flareCharges <= 0 || s.flareCooldown > 0 || s.inVehicle || s.inTurret) return;
+    s.flareCharges--;
+    s.flareActive = true;
+    s.flareCooldown = 20; // 20-second cooldown
+    s.careerFlares++;
+    const group = new Group();
+    // Flare sphere
+    const flareMat = new MeshBasicMaterial({ color: new Color(0xffffaa), transparent: true, opacity: 0.9 });
+    const sphere = new Mesh(new SphereGeometry(0.2, 8, 8), flareMat);
+    sphere.name = 'flareCore';
+    group.add(sphere);
+    // Glow halo
+    const halo = new Mesh(new SphereGeometry(0.5, 8, 8), new MeshBasicMaterial({
+      color: new Color(0xffff44),
+      transparent: true,
+      opacity: 0.3,
+      blending: AdditiveBlending,
+    }));
+    halo.name = 'flareHalo';
+    group.add(halo);
+    // Point light
+    const light = new PointLight(new Color(0xffffcc) as any, 3, 25);
+    group.add(light);
+    group.position.set(s.playerX, 12, s.playerZ);
+    this.world.scene.add(group);
+    this.flares.push({
+      mesh: group,
+      light,
+      x: s.playerX,
+      z: s.playerZ,
+      y: 12,
+      timer: 15,
+      particles: [],
+    });
+    this.triggerRadioChatter('FLARE LAUNCHED — lighting up the battlefield!');
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private updateFlares(dt: number) {
+    const s = this.state;
+    if (s.flareCooldown > 0) s.flareCooldown -= dt;
+    for (let i = this.flares.length - 1; i >= 0; i--) {
+      const f = this.flares[i];
+      f.timer -= dt;
+      // Slowly descend
+      f.y -= dt * 0.5;
+      f.mesh.position.set(f.x, f.y, f.z);
+      // Pulse light
+      f.light.intensity = 2 + Math.sin(f.timer * 5) * 1;
+      // Halo pulse
+      const halo = f.mesh.getObjectByName('flareHalo') as Mesh | undefined;
+      if (halo) {
+        (halo.material as MeshBasicMaterial).opacity = 0.2 + Math.sin(f.timer * 3) * 0.1;
+        halo.scale.setScalar(1 + Math.sin(f.timer * 4) * 0.2);
+      }
+      // Spawn trailing particles
+      if (Math.random() < 0.3) {
+        this.spawnParticle(f.x + (Math.random() - 0.5) * 0.3, f.y, f.z + (Math.random() - 0.5) * 0.3, '#ffff44', 1.0);
+      }
+      // Slow enemies within range by 20%
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        const dx = e.x - f.x;
+        const dz = e.z - f.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 12) {
+          // Dazzle effect: reduce speed
+          e.speed = e.speed * 0.995; // cumulative slight slowdown per frame
+        }
+      }
+      // Fade and remove
+      if (f.timer <= 0 || f.y <= 0) {
+        this.world.scene.remove(f.mesh);
+        this.flares.splice(i, 1);
+        if (this.flares.length === 0) {
+          s.flareActive = false;
+        }
+      }
+    }
+  }
+
+  // ── Sandbag Fortification System ──
+  private deploySandbag() {
+    const s = this.state;
+    if (s.sandbagCharges <= 0 || s.sandbagCooldown > 0 || s.inVehicle || s.inTurret) return;
+    s.sandbagCharges--;
+    s.sandbagCooldown = 10; // 10-second cooldown
+    s.careerSandbags++;
+    const group = new Group();
+    const bagMat = new MeshStandardMaterial({ color: new Color(0x886644), emissive: new Color(0x886644), emissiveIntensity: 0.2, wireframe: true });
+    // 3 sandbag rows stacked
+    for (let row = 0; row < 2; row++) {
+      for (let col = -1; col <= 1; col++) {
+        const bag = new Mesh(new BoxGeometry(0.5, 0.25, 0.3), bagMat);
+        bag.position.set(col * 0.55, row * 0.25 + 0.12, 0);
+        group.add(bag);
+      }
+    }
+    // Top row offset
+    for (let col = 0; col < 2; col++) {
+      const bag = new Mesh(new BoxGeometry(0.5, 0.25, 0.3), bagMat);
+      bag.position.set((col - 0.5) * 0.55, 0.62, 0);
+      group.add(bag);
+    }
+    // Position and rotate to face player's aim direction
+    group.position.set(
+      s.playerX + Math.sin(s.playerAngle) * 1.5,
+      0,
+      s.playerZ - Math.cos(s.playerAngle) * 1.5
+    );
+    group.rotation.y = s.playerAngle;
+    this.world.scene.add(group);
+    this.sandbags.push({
+      mesh: group,
+      x: group.position.x,
+      z: group.position.z,
+      hp: 4,
+      angle: s.playerAngle,
+    });
+    this.triggerRadioChatter('FORTIFICATION PLACED! Use it for cover.');
+    (this as any).audioSystem?.playPowerUp();
+  }
+
+  private updateSandbags(dt: number) {
+    const s = this.state;
+    if (s.sandbagCooldown > 0) s.sandbagCooldown -= dt;
+    for (let i = this.sandbags.length - 1; i >= 0; i--) {
+      const sb = this.sandbags[i];
+      // Check if too far behind player (off screen)
+      if (sb.z > s.playerZ + 20) {
+        this.world.scene.remove(sb.mesh);
+        this.sandbags.splice(i, 1);
+        continue;
+      }
+      // Check cover for player
+      const dx = s.playerX - sb.x;
+      const dz = s.playerZ - sb.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 1.8 && !s.inCover) {
+        s.inCover = true;
+      }
+      // Visual feedback when low HP
+      if (sb.hp <= 2) {
+        sb.mesh.children.forEach((c: any) => {
+          if (c.material) {
+            c.material.emissiveIntensity = 0.2 + Math.sin(Date.now() * 0.01) * 0.2;
+          }
+        });
+      }
+      if (sb.hp <= 0) {
+        // Destruction particles
+        for (let p = 0; p < 8; p++) {
+          this.spawnParticle(sb.x + (Math.random() - 0.5), 0.3, sb.z + (Math.random() - 0.5), '#886644', 1.0);
+        }
+        this.world.scene.remove(sb.mesh);
+        this.sandbags.splice(i, 1);
+      }
+    }
+    // Sandbags block enemy bullets — check in bullet update (handled via cover system)
+  }
+
+  // Check if a bullet hits any player-placed sandbag
+  private checkSandbagHit(bx: number, bz: number): boolean {
+    for (const sb of this.sandbags) {
+      const dx = bx - sb.x;
+      const dz = bz - sb.z;
+      if (Math.abs(dx) < 0.9 && Math.abs(dz) < 0.5) {
+        sb.hp--;
+        this.spawnParticle(bx, 0.3, bz, '#886644', 0.5);
+        return true;
+      }
+    }
+    return false;
   }
 
   getState(): GameState {
