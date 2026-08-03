@@ -299,6 +299,26 @@ interface ThreatArrow {
   enemyId: number;
 }
 
+interface DogTag {
+  mesh: Group;
+  x: number;
+  z: number;
+  bobTimer: number;
+}
+
+interface RadioChatter {
+  text: string;
+  timer: number;
+}
+
+interface AirStrike {
+  x: number;
+  z: number;
+  timer: number;
+  warningMeshes: Mesh[];
+  impacted: boolean;
+}
+
 // ── Game State ──
 export interface GameState {
   phase: 'menu' | 'playing' | 'paused' | 'gameover' | 'results';
@@ -429,6 +449,18 @@ export interface GameState {
   // Weapon pickup flash
   weaponPickupFlashTimer: number;
   weaponPickupName: string;
+  // Dog tags
+  careerDogTags: number;
+  runDogTags: number;
+  // Radio chatter
+  radioChatter: string;
+  radioChatterTimer: number;
+  // Air support
+  airSupportCooldown: number;
+  airSupportReady: boolean;
+  careerAirStrikes: number;
+  // APC tracking
+  careerAPCKills: number;
 }
 
 // ── Constants ──
@@ -506,6 +538,9 @@ export class GameSystem extends createSystem({}) {
   private threatArrows: ThreatArrow[] = [];
   private weaponPickupFlashMeshes: Mesh[] = [];
   private nextEnemyId = 0;
+  private dogTags: DogTag[] = [];
+  private radioChatterQueue: string[] = [];
+  private airStrikes: AirStrike[] = [];
 
   init() {
     this.state = this.createDefaultState();
@@ -622,6 +657,14 @@ export class GameSystem extends createSystem({}) {
       careerDecoyUses: 0,
       weaponPickupFlashTimer: 0,
       weaponPickupName: '',
+      careerDogTags: 0,
+      runDogTags: 0,
+      radioChatter: '',
+      radioChatterTimer: 0,
+      airSupportCooldown: 0,
+      airSupportReady: true,
+      careerAirStrikes: 0,
+      careerAPCKills: 0,
     };
   }
 
@@ -648,6 +691,9 @@ export class GameSystem extends createSystem({}) {
         this.state.careerOfficerKills = s.careerOfficerKills || 0;
         this.state.careerTurretKills = s.careerTurretKills || 0;
         this.state.careerDecoyUses = s.careerDecoyUses || 0;
+        this.state.careerDogTags = s.careerDogTags || 0;
+        this.state.careerAirStrikes = s.careerAirStrikes || 0;
+        this.state.careerAPCKills = s.careerAPCKills || 0;
       }
       const settings = localStorage.getItem('neon-commando-settings');
       if (settings) {
@@ -690,6 +736,9 @@ export class GameSystem extends createSystem({}) {
         careerOfficerKills: this.state.careerOfficerKills,
         careerTurretKills: this.state.careerTurretKills,
         careerDecoyUses: this.state.careerDecoyUses,
+        careerDogTags: this.state.careerDogTags,
+        careerAirStrikes: this.state.careerAirStrikes,
+        careerAPCKills: this.state.careerAPCKills,
       }));
       this.addToLeaderboard(this.state.score, this.state.wave);
       this.checkScoreAchievements();
@@ -1093,6 +1142,48 @@ export class GameSystem extends createSystem({}) {
         aura.position.y = 0.05;
         aura.name = 'commandAura';
         group.add(aura);
+        break;
+      }
+      case 'apc': {
+        hp = 10; points = 600; speed = 0.8; shootInterval = 2.0; aggroRange = 16;
+        // Armored Personnel Carrier — large armored vehicle that deploys soldiers
+        const apcHullGeo = new BoxGeometry(1.2, 0.5, 1.8);
+        const apcHullMat = new MeshStandardMaterial({ color: 0x4a5a3a, emissive: ec, emissiveIntensity: 0.2 });
+        group.add(new Mesh(apcHullGeo, apcHullMat));
+        // APC cabin
+        const cabinGeo = new BoxGeometry(1.0, 0.4, 0.8);
+        const cabinMat = new MeshStandardMaterial({ color: 0x5a6a4a, emissive: ec, emissiveIntensity: 0.3 });
+        const cabin = new Mesh(cabinGeo, cabinMat);
+        cabin.position.set(0, 0.45, -0.3);
+        group.add(cabin);
+        // APC gun turret
+        const apcTurretGeo = new CylinderGeometry(0.2, 0.25, 0.2, 6);
+        const apcTurret = new Mesh(apcTurretGeo, cabinMat);
+        apcTurret.position.set(0, 0.7, -0.2);
+        group.add(apcTurret);
+        const apcGunGeo = new CylinderGeometry(0.05, 0.05, 0.5, 6);
+        const apcGun = new Mesh(apcGunGeo, cabinMat);
+        apcGun.rotation.x = Math.PI / 2;
+        apcGun.position.set(0, 0.75, -0.5);
+        group.add(apcGun);
+        // APC wheels
+        for (let s = -1; s <= 1; s += 2) {
+          for (let wz = -0.6; wz <= 0.6; wz += 0.6) {
+            const wheelGeo = new CylinderGeometry(0.18, 0.18, 0.12, 8);
+            const wheelMat = new MeshStandardMaterial({ color: 0x222222, emissive: ec, emissiveIntensity: 0.1 });
+            const wheel = new Mesh(wheelGeo, wheelMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(s * 0.65, -0.15, wz);
+            group.add(wheel);
+          }
+        }
+        // Armor plate indicator
+        const armorGeo = new BoxGeometry(1.25, 0.08, 1.85);
+        const armorMat = new MeshBasicMaterial({ color: ec, transparent: true, opacity: 0.15 });
+        const armor = new Mesh(armorGeo, armorMat);
+        armor.position.y = 0.55;
+        armor.name = 'apcArmor';
+        group.add(armor);
         break;
       }
       case 'boss': {
@@ -2276,6 +2367,12 @@ export class GameSystem extends createSystem({}) {
 
     (this as any).audioSystem?.playWaveStart();
 
+    // Radio chatter at wave start (every 3 waves)
+    if (wave % 3 === 0 && wave > 1) {
+      const chatter = GameSystem.RADIO_CHATTER_POOL;
+      this.triggerRadioChatter(chatter[Math.floor(Math.random() * chatter.length)]);
+    }
+
     // Environmental storytelling — debris in later waves
     this.spawnWaveDebris();
 
@@ -2302,6 +2399,7 @@ export class GameSystem extends createSystem({}) {
     if (wave >= 6) types.push('officer');
     if (wave >= 7) types.push('tank');
     if (wave >= 8) types.push('helicopter');
+    if (wave >= 7) types.push('apc');
 
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -3019,6 +3117,26 @@ export class GameSystem extends createSystem({}) {
     for (let i = 0; i < count; i++) {
       this.spawnParticle(enemy.x, 0.5, enemy.z, colors.enemy, 1.2);
     }
+    // APC deploys soldiers on death
+    if (enemy.type === 'apc') {
+      this.state.careerAPCKills++;
+      const soldiersToSpawn = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < soldiersToSpawn; i++) {
+        const sx = enemy.x + (Math.random() - 0.5) * 2;
+        const sz = enemy.z + (Math.random() - 0.5) * 2;
+        if (this.enemies.length < MAX_ENEMIES) {
+          this.enemies.push(this.createEnemy('soldier', sx, sz));
+        }
+      }
+      this.createExplosion(enemy.x, enemy.z, 2.5, 1);
+      this.state.screenShake = 0.5;
+    }
+    // Drop dog tag (30% chance for regular, 100% for officers/APCs, 60% for elites)
+    const isElite = (enemy as any).isElite;
+    const tagChance = (enemy.type === 'officer' || enemy.type === 'apc') ? 1.0 : isElite ? 0.6 : 0.3;
+    if (Math.random() < tagChance) {
+      this.spawnDogTag(enemy.x, enemy.z);
+    }
   }
 
   // ── Mission System ──
@@ -3458,6 +3576,9 @@ export class GameSystem extends createSystem({}) {
       this.updateWeatherParticles(dt);
       this.updateThreatArrows(dt);
       this.updateWeaponPickupFlash(dt);
+      this.updateDogTags(dt);
+      this.updateRadioChatter(dt);
+      this.updateAirStrikes(dt);
       this.updateMusicIntensity();
       this.updateCamera(dt);
       this.updateTimers(dt);
@@ -3497,6 +3618,9 @@ export class GameSystem extends createSystem({}) {
     // Decoy hologram: H key
     let decoyTrigger = false;
     if (kb.getKeyDown('KeyH')) decoyTrigger = true;
+    // Air support call-in: R key
+    let airSupportTrigger = false;
+    if (kb.getKeyDown('KeyR')) airSupportTrigger = true;
     // Turret mount/dismount: F key
     let turretToggle = false;
     if (kb.getKeyDown('KeyF')) turretToggle = true;
@@ -3549,6 +3673,7 @@ export class GameSystem extends createSystem({}) {
       if (leftGP.getButtonDown(InputComponent.Trigger)) grenadeThrow = true;
       if (leftGP.getButtonDown(InputComponent.X_Button)) this.cycleWeapon();
       if (leftGP.getButtonDown(InputComponent.A_Button)) smokeThrow = true;
+      if (leftGP.getButtonDown(InputComponent.Y_Button)) airSupportTrigger = true;
     }
 
     // Dodge roll cooldown
@@ -3668,6 +3793,11 @@ export class GameSystem extends createSystem({}) {
     // Decoy hologram deploy
     if (decoyTrigger && !s.inVehicle && !s.inTurret) {
       this.spawnDecoy();
+    }
+
+    // Air support call-in
+    if (airSupportTrigger && s.airSupportReady && s.airSupportCooldown <= 0) {
+      this.callAirSupport();
     }
 
     // Turret mount/dismount
@@ -3793,7 +3923,7 @@ export class GameSystem extends createSystem({}) {
           if (enemy.dead) continue;
           const dx = b.mesh.position.x - enemy.x;
           const dz = b.mesh.position.z - enemy.z;
-          const hitRadius = enemy.type === 'tank' || enemy.type === 'boss' || enemy.type === 'artillery' || enemy.type === 'attack_heli' ? 0.8 : 0.5;
+          const hitRadius = enemy.type === 'tank' || enemy.type === 'boss' || enemy.type === 'artillery' || enemy.type === 'attack_heli' || enemy.type === 'apc' ? 0.8 : 0.5;
           if (Math.sqrt(dx * dx + dz * dz) < hitRadius) {
             this.damageEnemy(enemy, b.damage);
             this.world.scene.remove(b.mesh);
@@ -5223,6 +5353,221 @@ export class GameSystem extends createSystem({}) {
   getAchievementDefs() { return GameSystem.ACHIEVEMENT_DEFS; }
   popAchievementQueue(): string | undefined { return this.achievementQueue.shift(); }
   getAliveEnemyCount(): number { return this.enemies.filter(e => !e.dead).length; }
+
+  // ── Dog Tag System ──
+  private spawnDogTag(x: number, z: number) {
+    const group = new Group();
+    // Tag shape — small metallic rectangle
+    const tagGeo = new BoxGeometry(0.15, 0.22, 0.02);
+    const tagMat = new MeshStandardMaterial({ color: 0xcccccc, emissive: new Color(0x88aacc), emissiveIntensity: 0.6, metalness: 0.8 });
+    const tag = new Mesh(tagGeo, tagMat);
+    group.add(tag);
+    // Chain link
+    const chainGeo = new TorusGeometry(0.05, 0.01, 4, 8);
+    const chainMat = new MeshBasicMaterial({ color: 0x999999 });
+    const chain = new Mesh(chainGeo, chainMat);
+    chain.position.y = 0.14;
+    group.add(chain);
+    // Glow indicator
+    const glowGeo = new SphereGeometry(0.1, 6, 4);
+    const glowMat = new MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.3 });
+    const glow = new Mesh(glowGeo, glowMat);
+    group.add(glow);
+    group.position.set(x, 0.3, z);
+    this.world.scene.add(group);
+    this.dogTags.push({ mesh: group, x, z, bobTimer: 0 });
+  }
+
+  private updateDogTags(dt: number) {
+    const s = this.state;
+    for (let i = this.dogTags.length - 1; i >= 0; i--) {
+      const tag = this.dogTags[i];
+      tag.bobTimer += dt;
+      tag.mesh.position.y = 0.3 + Math.sin(tag.bobTimer * 4) * 0.1;
+      tag.mesh.rotation.y += dt * 2;
+      // Cull if too far behind
+      if (tag.z > s.scrollZ + FIELD_DEPTH) {
+        this.world.scene.remove(tag.mesh);
+        this.dogTags.splice(i, 1);
+        continue;
+      }
+      // Collect on proximity
+      const dx = s.playerX - tag.x;
+      const dz = s.playerZ - tag.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 1.0) {
+        s.runDogTags++;
+        s.careerDogTags++;
+        s.score += 50;
+        // Every 5 dog tags = extra life
+        if (s.runDogTags % 5 === 0) {
+          s.lives = Math.min(s.lives + 1, 9);
+          this.triggerRadioChatter('EXTRA LIFE — dog tags collected!');
+        }
+        this.spawnScorePopup(tag.x, tag.z, 50, 0);
+        (this as any).audioSystem?.playPowerUp();
+        this.world.scene.remove(tag.mesh);
+        this.dogTags.splice(i, 1);
+      }
+    }
+  }
+
+  // ── Radio Chatter System ──
+  private static readonly RADIO_CHATTER_POOL = [
+    'HQ: Enemy reinforcements approaching from the north!',
+    'COMMAND: Air recon shows heavy armor ahead.',
+    'HQ: Good kills, soldier. Keep pushing!',
+    'INTEL: Enemy supply lines detected nearby.',
+    'COMMAND: Watch your flanks — contacts on both sides.',
+    'HQ: POWs reported in the area. Stay alert.',
+    'COMMAND: Hostile artillery emplacement spotted.',
+    'INTEL: Enemy commander sighted. High-value target.',
+    'HQ: Aerial support is standing by.',
+    'COMMAND: Maintain fire discipline — conserve ammo.',
+    'INTEL: Motion sensors triggered. Brace for contact.',
+    'HQ: Outstanding performance. Promotion recommended.',
+    'COMMAND: Danger close! Watch for friendly fire.',
+    'INTEL: Enemy forces are regrouping. Expect a push.',
+    'HQ: Supply drop inbound. Hold your position.',
+  ];
+
+  private triggerRadioChatter(text: string) {
+    this.state.radioChatter = text;
+    this.state.radioChatterTimer = 3.5;
+  }
+
+  private updateRadioChatter(dt: number) {
+    const s = this.state;
+    if (s.radioChatterTimer > 0) {
+      s.radioChatterTimer -= dt;
+      if (s.radioChatterTimer <= 0) {
+        s.radioChatter = '';
+      }
+    }
+    // Random chatter every ~30 seconds during gameplay
+    if (s.phase === 'playing' && Math.random() < dt / 30) {
+      if (s.radioChatterTimer <= 0) {
+        const pool = GameSystem.RADIO_CHATTER_POOL;
+        this.triggerRadioChatter(pool[Math.floor(Math.random() * pool.length)]);
+      }
+    }
+  }
+
+  // ── Air Support Call-In ──
+  private callAirSupport() {
+    const s = this.state;
+    if (s.airSupportCooldown > 0 || !s.airSupportReady) return;
+    s.airSupportCooldown = 45; // 45-second cooldown
+    s.airSupportReady = false;
+    s.careerAirStrikes++;
+    this.triggerRadioChatter('AIR SUPPORT INBOUND! Clear the area!');
+    (this as any).audioSystem?.playBossEntrance();
+
+    // Create 3 strike zones targeting enemy clusters
+    const targets: Array<{ x: number; z: number }> = [];
+    const alive = this.enemies.filter(e => !e.dead);
+    if (alive.length > 0) {
+      // Target up to 3 enemy positions
+      const shuffled = [...alive].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+        targets.push({ x: shuffled[i].x, z: shuffled[i].z });
+      }
+    } else {
+      // No enemies — target area ahead of player
+      targets.push({ x: s.playerX, z: s.playerZ - 10 });
+    }
+
+    for (const t of targets) {
+      const warningMeshes: Mesh[] = [];
+      // Warning circle on ground
+      const ringGeo = new RingGeometry(1.5, 2.0, 16);
+      const ringMat = new MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.4, side: DoubleSide });
+      const ring = new Mesh(ringGeo, ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(t.x, 0.05, t.z);
+      this.world.scene.add(ring);
+      warningMeshes.push(ring);
+      // Inner fill
+      const fillGeo = new RingGeometry(0, 1.5, 16);
+      const fillMat = new MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.15, side: DoubleSide });
+      const fill = new Mesh(fillGeo, fillMat);
+      fill.rotation.x = -Math.PI / 2;
+      fill.position.set(t.x, 0.04, t.z);
+      this.world.scene.add(fill);
+      warningMeshes.push(fill);
+
+      this.airStrikes.push({ x: t.x, z: t.z, timer: 1.5, warningMeshes, impacted: false });
+    }
+  }
+
+  private updateAirStrikes(dt: number) {
+    const s = this.state;
+    // Air support cooldown
+    if (s.airSupportCooldown > 0) {
+      s.airSupportCooldown -= dt;
+      if (s.airSupportCooldown <= 0) {
+        s.airSupportReady = true;
+        this.triggerRadioChatter('Air support recharged. Ready on your command.');
+      }
+    }
+
+    for (let i = this.airStrikes.length - 1; i >= 0; i--) {
+      const strike = this.airStrikes[i];
+      strike.timer -= dt;
+
+      // Pulse warning meshes
+      for (const m of strike.warningMeshes) {
+        (m.material as MeshBasicMaterial).opacity = 0.2 + Math.sin(strike.timer * 12) * 0.2;
+      }
+
+      // Impact!
+      if (strike.timer <= 0 && !strike.impacted) {
+        strike.impacted = true;
+        // Big explosion
+        this.createExplosion(strike.x, strike.z, 4, 3);
+        s.screenShake = 1.0;
+        (this as any).audioSystem?.playExplosion();
+        // Damage all enemies in radius
+        const blastRadius = 4;
+        for (const enemy of this.enemies) {
+          if (enemy.dead) continue;
+          const dx = enemy.x - strike.x;
+          const dz = enemy.z - strike.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist < blastRadius) {
+            const dmg = Math.floor(8 * (1 - dist / blastRadius));
+            this.damageEnemy(enemy, Math.max(dmg, 2));
+          }
+        }
+        // Also destroy nearby mines, fuel drums
+        for (const mine of this.mines) {
+          const mdx = mine.x - strike.x;
+          const mdz = mine.z - strike.z;
+          if (Math.sqrt(mdx * mdx + mdz * mdz) < blastRadius) {
+            this.createExplosion(mine.x, mine.z, 1.5, 1);
+            this.world.scene.remove(mine.mesh);
+          }
+        }
+        this.mines = this.mines.filter(m => {
+          const dx2 = m.x - strike.x;
+          const dz2 = m.z - strike.z;
+          return Math.sqrt(dx2 * dx2 + dz2 * dz2) >= blastRadius;
+        });
+        // Cleanup warning meshes
+        for (const m of strike.warningMeshes) {
+          this.world.scene.remove(m);
+        }
+        // Extra particles
+        for (let p = 0; p < 15; p++) {
+          this.spawnParticle(strike.x + (Math.random() - 0.5) * 3, 1.5, strike.z + (Math.random() - 0.5) * 3, '#ff6600', 1.5);
+        }
+      }
+
+      // Remove after impact
+      if (strike.impacted) {
+        this.airStrikes.splice(i, 1);
+      }
+    }
+  }
 
   getState(): GameState {
     return this.state;

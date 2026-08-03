@@ -447,6 +447,9 @@ export class UISystem extends createSystem({
     setText(this.statsDoc, 'stat-powerups', `Power-Ups: ${s.totalPowerUps}`);
     setText(this.statsDoc, 'stat-waves', `Best Wave: ${s.totalWaves}`);
     setText(this.statsDoc, 'stat-deaths', `Total Deaths: ${s.totalDeaths}`);
+    setText(this.statsDoc, 'stat-dogtags', `Dog Tags: ${s.careerDogTags}`);
+    setText(this.statsDoc, 'stat-airstrikes', `Air Strikes: ${s.careerAirStrikes}`);
+    setText(this.statsDoc, 'stat-apckills', `APCs Destroyed: ${s.careerAPCKills}`);
     setText(this.statsDoc, 'stat-highscore', `High Score: ${s.highScore}`);
     setText(this.statsDoc, 'stat-missions', `Missions: ${s.careerMissions}`);
     setText(this.statsDoc, 'stat-vehicles', `Vehicles Used: ${s.careerVehiclesUsed}`);
@@ -737,6 +740,30 @@ export class UISystem extends createSystem({
     } else {
       setText(this.hudDoc, 'hud-weapon-pickup', '');
     }
+
+    // Radio chatter
+    if (s.radioChatterTimer > 0) {
+      setText(this.hudDoc, 'hud-radio', `📻 ${s.radioChatter}`);
+    } else {
+      setText(this.hudDoc, 'hud-radio', '');
+    }
+
+    // Air support status
+    if (s.airSupportReady) {
+      setText(this.hudDoc, 'hud-air-support', 'R: Call Air Support ✈');
+    } else if (s.airSupportCooldown > 0) {
+      setText(this.hudDoc, 'hud-air-support', `Air Support: ${Math.ceil(s.airSupportCooldown)}s`);
+    } else {
+      setText(this.hudDoc, 'hud-air-support', '');
+    }
+
+    // Dog tags
+    if (s.runDogTags > 0) {
+      const nextLife = 5 - (s.runDogTags % 5);
+      setText(this.hudDoc, 'hud-dogtags', `🏷 Tags: ${s.runDogTags} (${nextLife} to 1UP)`);
+    } else {
+      setText(this.hudDoc, 'hud-dogtags', '');
+    }
   }
 
   private updateResults(s: GameState) {
@@ -758,5 +785,6 @@ export class UISystem extends createSystem({
     setText(this.resultsDoc, 'results-achievements', `Achievements: ${s.runAchievementsEarned}`);
     setText(this.resultsDoc, 'results-bonus', `Bonus Objectives: ${s.bonusObjectivesCompleted}`);
     setText(this.resultsDoc, 'results-multikill', `Best Multi-Kill: ${s.multiKillBest}x`);
+    setText(this.resultsDoc, 'results-dogtags', `Dog Tags: ${s.runDogTags}`);
   }
 }

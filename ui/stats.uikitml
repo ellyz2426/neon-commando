@@ -41,6 +41,9 @@
     <div id="stat-powerups" class="stat-row">Power-Ups: 0</div>
     <div id="stat-waves" class="stat-row">Best Wave: 0</div>
     <div id="stat-deaths" class="stat-row">Total Deaths: 0</div>
+    <div id="stat-dogtags" class="stat-row">Dog Tags: 0</div>
+    <div id="stat-airstrikes" class="stat-row">Air Strikes: 0</div>
+    <div id="stat-apckills" class="stat-row">APCs Destroyed: 0</div>
     <div id="btn-close-stats" class="close-btn">Close</div>
   </div>
 </panel>

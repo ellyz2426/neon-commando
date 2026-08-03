@@ -45,6 +45,7 @@
     <div class="control-row">E / J: Throw Grenade</div>
     <div class="control-row">G: Smoke Grenade</div>
     <div class="control-row">H: Deploy Decoy</div>
+    <div class="control-row">R: Call Air Support</div>
     <div class="control-row">F: Mount/Dismount Turret</div>
     <div class="control-row">Tab: Cycle Weapon</div>
     <div class="control-row">Shift: Dodge Roll</div>
@@ -61,6 +62,9 @@
     <div class="control-row">Walk into jeeps to commandeer</div>
     <div class="control-row">F near turrets to mount them</div>
     <div class="control-row">Decoys draw enemy fire</div>
+    <div class="control-row">R calls air support (45s cooldown)</div>
+    <div class="control-row">Collect dog tags for bonus lives (5 = 1UP)</div>
+    <div class="control-row">APCs deploy soldiers when destroyed</div>
     <div class="control-row">Kill officers to remove enemy buffs</div>
     <div class="control-row">Chain kills for combo multiplier</div>
     <div id="btn-close-tutorial" class="close-btn">Close</div>

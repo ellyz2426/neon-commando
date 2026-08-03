@@ -65,6 +65,7 @@
       <div id="results-achievements" class="results-row"></div>
       <div id="results-bonus" class="results-row"></div>
       <div id="results-multikill" class="results-row"></div>
+      <div id="results-dogtags" class="results-row"></div>
     </div>
     <div class="btn-row">
       <div id="btn-retry" class="results-btn">Retry</div>
